@@ -143,7 +143,8 @@ class Env():
         self.game = game
         self.grid = Grid(self.game.mapWidth, self.game.mapHeight)
         self.base_pos = Position(self.game.baseX, self.game.baseY)
-        self.position = Position(self.game.ant.x, self.game.ant.y)
+        self.position = Position(
+            self.game.ant.currentX, self.game.ant.currentY)
         self.ant = self.game.ant
 
     def update_walls(self):
@@ -163,7 +164,8 @@ class Env():
                     return
 
             elif self.task.type == TaskType.HARVEST:
-                if self.ant.resource:
+                # TODO: resource threshold
+                if self.ant.currentResource and self.ant.currentResource.value > 0:
                     self.task = Task(type=TaskType.RETURN,
                                      destination=self.base_pos)
                     return
@@ -196,8 +198,3 @@ class Env():
                 self.task = Task(type=TaskType.EXPLORE,
                                  destination=destination)
                 return
-
-
-g = Grid(20, 30)
-
-print(g.bfs_unknown(Position(1, 1), Position(17, 17)))
