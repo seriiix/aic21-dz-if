@@ -1,4 +1,5 @@
 from typing import List
+from copy import deepcopy
 import numpy as np
 from Model import Ant, Game, Resource, ResourceType
 
@@ -20,11 +21,21 @@ class Grid():
         self.cells = [[MapCell(i, j) for i in range(width)]
                       for j in range(height)]
 
+    def __getitem__(self, position:Position):
+        return self.cells[position.y][position.x]   
+
+    def __setitem__(self, position:Position, value:Cell):
+        self.cells[position.y][position.x] = deepcopy(value)
+
 
 class Position():
     def __init__(self, x, y):
         self.x = x
         self.y = y
+
+
+class Task:
+    def 
 
 
 class Env():
@@ -34,7 +45,7 @@ class Env():
         self.width = None
         self.height = None
         self.base_pos: Position = None
-        self.Q = []
+        self.task: Task = None
 
     def init_grid(self, game):
         self.game = game
@@ -56,34 +67,6 @@ class Env():
     def y_plus(self, y, dist):
         return (y + dist) % self.height
 
-    def partition_zones(self):
-        # fuck = [['-' for i in range(self.width)]
-        #         for j in range(self.height)]
-        zones: List[Position] = []
-
-        i = 0
-        while i < self.width:
-            if (i / 4) % 2 == 0:
-                j = 0
-            else:
-                j = 4
-
-            while j < self.height:
-                zones.append(Position(i, j))
-                j += 8
-            i += 4
-
-        # for i in range(len(zones)):
-        #     zones[i].x = self.x_plus(zones[i].x, self.base_pos.x)
-        #     zones[i].y = self.y_plus(zones[i].y, self.base_pos.y)
-        #     fuck[zones[i].y][zones[i].x] = '#'
-
-        # fuck[self.base_pos.y][self.base_pos.x] = '$'
-
-        # for i in range(self.height):
-        #     cunt = ''
-        #     for j in range(self.width):
-        #         cunt += fuck[i][j]
-        #     print(cunt)
-
-        self.zones = zones
+    def select_task(self):
+        "analyzes the map and trys to get the most important task"
+        pass

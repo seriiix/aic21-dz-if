@@ -21,11 +21,6 @@ class AI:
         # Current Game State
         self.game: Game = None
 
-        # Answer
-        self.message: str = None
-        self.direction: int = None
-        self.value: int = None
-
     def turn(self):
         print('shit')
         if brain.ant_turn_number == 0:
