@@ -22,7 +22,6 @@ class AI:
         self.game: Game = None
 
     def turn(self):
-        print('shit')
         if brain.ant_turn_number == 0:
             brain.env.init_grid(self.game)
         brain.env.game = self.game
