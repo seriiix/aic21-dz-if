@@ -21,8 +21,7 @@ class Position():
 
 class MapCell():
     def __init__(self, x, y):
-        self.x = x
-        self.y = y
+        self.position = Position(x, y)
         self.known: bool = False  # seen at least one time
         self.wall: bool = False
         self.resource: Resource = None
