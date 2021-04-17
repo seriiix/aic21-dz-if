@@ -3,7 +3,7 @@ from enum import Enum
 from random import randint
 from copy import deepcopy
 import numpy as np
-from Model import Ant, Game, Map, Resource, ResourceType
+from Model import Ant, Direction, Game, Map, Resource, ResourceType
 from collections import deque
 from x_consts import dx, dy
 
@@ -97,6 +97,24 @@ class Grid():
                     visited[neighbor.y][neighbor.x] = 1
 
         return None
+
+    def get_direction(self, start: Position, goal: Position):
+        path = self.bfs_unknown(start, goal)
+        if path is None:
+            return None
+        curr_step = path[0]
+        next_step = path[1]
+
+        if self.fix_pos(Position(curr_step.x + 1, curr_step.y)).x == next_step.x:
+            return Direction.RIGHT
+        if self.fix_pos(Position(curr_step.x - 1, curr_step.y)).x == next_step.x:
+            return Direction.LEFT
+        if self.fix_pos(Position(curr_step.x, curr_step.y + 1)).y == next_step.y:
+            return Direction.DOWN
+        if self.fix_pos(Position(curr_step.x, curr_step.y - 1)).y == next_step.y:
+            return Direction.UP
+
+        return -1
 
     def get_harvest_location(self, position: Position) -> Position:
         # we assume the nearest location is the best
