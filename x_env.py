@@ -58,7 +58,6 @@ class Grid():
         self.height = height
         self.cells = [[MapCell(i, j) for i in range(width)]
                       for j in range(height)]
-        # self.bfs_unknown(Position(1, 1), Position(5, 5))
 
     def __getitem__(self, position: Position):
         return self.cells[position.y][position.x]
