@@ -12,7 +12,7 @@ class Position():
         self.y = y
 
     def __eq__(self, other) -> bool:
-        if type(other) == Position and other != None:
+        if type(other) == Position:
             return self.x == other.x and self.y == other.y
         return False
 
@@ -34,7 +34,7 @@ class MapCell():
         self.base: bool = None  # True = Enemy Base, False = Our Base
 
     def __eq__(self, other) -> bool:
-        if type(other) == MapCell and other != None:
+        if type(other) == MapCell:
             return self.position == other.position
         return False
 
@@ -71,51 +71,24 @@ class Grid():
         return pos
 
     def bfs_unknown(self, start: Position, goal: Position):
-        """ self[Position(0, 0)].wall = True
-        self[Position(1, 0)].wall = True
-        self[Position(2, 0)].wall = True
-        #self[Position(0, 1)].wall = True
-        self[Position(2, 1)].wall = True
-        self[Position(0, 2)].wall = True
-        self[Position(1, 2)].wall = True
-        self[Position(2, 2)].wall = True """
+        if start == goal:
+            return [start]
+        visited = np.zeros((self.height, self.width))
+        queue = deque([(start, [])])
 
-        for i in range(10):
-            s = ''
-            for j in range(10):
-                if self[Position(i, j)].wall == True:
-                    s += '#'
-                else:
-                    s += '-'
+        while queue:
+            current, path = queue.popleft()
+            visited[current.y][current.x] = 1
 
-            print(s)
-
-        visited: List[MapCell] = []
-        q = deque()
-        q.append(self[start])
-
-        cntr = 0
-
-        while len(q) > 0:
-            cntr += 1
-            if cntr == 20:
-                break
-
-            cell: MapCell = q.popleft()
-            if cell not in visited:
-                visited.append(cell)
-            if cell == self[goal]:
-                print('yea', cell)
-                return
-
-            print(cell)
-
-            # handle childs
             for k in range(4):
-                pos: Position = self.fix_pos(
-                    Position(dx[k] + cell.position.x, dy[k] + cell.position.y))
-                if self[pos] not in visited:
-                    q.append(self[pos])
+                x_ = dx[k] + current.x
+                y_ = dy[k] + current.y
+                neighbor = self.fix_pos(Position(x_, y_))
+                if neighbor == goal:
+                    return path + [current, neighbor]
+                if visited[neighbor.y][neighbor.x] == 0 and self[neighbor].wall == False:
+                    queue.append((neighbor, path + [current]))
+                    visited[neighbor.y][neighbor.x] = 1
 
         return None
 
@@ -147,7 +120,3 @@ class Env():
     def select_task(self):
         "analyzes the map and trys to get the most important task"
         pass
-
-
-g = Grid(20, 30)
-g.bfs_unknown(Position(1, 1), Position(10, 5))
