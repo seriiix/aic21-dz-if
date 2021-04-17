@@ -102,6 +102,9 @@ class Grid():
         path = self.bfs_unknown(start, goal)
         if path is None:
             return None
+        if start == goal:
+            return Direction.CENTER
+
         curr_step = path[0]
         next_step = path[1]
 
