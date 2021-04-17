@@ -169,9 +169,12 @@ class Env():
         self.ant = self.game.ant
 
     def update_walls(self):
+        # own vision
+
+        # from messages
         messages = self.game.chatBox.allChats
         for msg in messages:
-            pass
+            break
             # TODO: update walls
 
     def update_task(self):
