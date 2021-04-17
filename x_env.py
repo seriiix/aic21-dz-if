@@ -2,6 +2,7 @@ from typing import List
 from copy import deepcopy
 import numpy as np
 from Model import Ant, Game, Resource, ResourceType
+from collections import deque
 
 
 class MapCell():
@@ -16,26 +17,28 @@ class MapCell():
         self.base: bool = None  # True = Enemy Base, False = Our Base
 
 
-class Grid():
-    def __init__(self, width, height):
-        self.cells = [[MapCell(i, j) for i in range(width)]
-                      for j in range(height)]
-
-    def __getitem__(self, position:Position):
-        return self.cells[position.y][position.x]   
-
-    def __setitem__(self, position:Position, value:Cell):
-        self.cells[position.y][position.x] = deepcopy(value)
-
-
 class Position():
     def __init__(self, x, y):
         self.x = x
         self.y = y
 
 
-class Task:
-    def 
+class Grid():
+    def __init__(self, width, height):
+        self.cells = [[MapCell(i, j) for i in range(width)]
+                      for j in range(height)]
+
+    def __getitem__(self, position: Position):
+        return self.cells[position.y][position.x]
+
+    def __setitem__(self, position: Position, value: MapCell):
+        self.cells[position.y][position.x] = deepcopy(value)
+
+    def bfs_unknown(self, start: Position, goal: Position):
+        queue = deque()
+
+        return None
+    # Tail starts here
 
 
 class Env():
@@ -45,7 +48,7 @@ class Env():
         self.width = None
         self.height = None
         self.base_pos: Position = None
-        self.task: Task = None
+        #self.task: Task = None
 
     def init_grid(self, game):
         self.game = game
