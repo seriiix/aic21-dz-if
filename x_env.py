@@ -7,11 +7,12 @@ class MapCell():
     def __init__(self, x, y):
         self.x = x
         self.y = y
+        self.known: bool = False  # seen at least one time
         self.wall: bool = False
         self.resource: Resource = None
+        self.resource_seen: int = None  # How many turns passed since we see the resource
         self.ants: Ant = []
-        self.base: bool = None  # True = our base, False = enemy base
-        self.zone_id: int = None
+        self.base: bool = None  # True = Enemy Base, False = Our Base
 
 
 class Grid():
@@ -26,11 +27,6 @@ class Position():
         self.y = y
 
 
-class ZoneHandler():
-    def __init__(self):
-        self.zones: List[Position] = []
-
-
 class Env():
     def __init__(self):
         self.game: Game = None
@@ -39,8 +35,6 @@ class Env():
         self.height = None
         self.base_pos: Position = None
         self.Q = []
-        self.zone_handler: ZoneHandler = None
-        self.zones: List[Position] = []
 
     def init_grid(self, game):
         self.game = game
