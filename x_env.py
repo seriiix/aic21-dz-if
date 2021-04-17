@@ -3,7 +3,9 @@ from enum import Enum
 from random import randint
 from copy import deepcopy
 import numpy as np
-from Model import Ant, Game, Resource, ResourceType
+from Model import Ant, Game, Map, Resource, ResourceType
+from collections import deque
+from x_consts import dx, dy
 
 
 class Position():
@@ -11,8 +13,16 @@ class Position():
         self.x = x
         self.y = y
 
-    def __eq__(self, other: Position):
-        return self.x == other.x and self.y == other.y
+    def __eq__(self, other) -> bool:
+        if type(other) == Position:
+            return self.x == other.x and self.y == other.y
+        return False
+
+    def __str__(self) -> str:
+        return f'x={self.x} y={self.y}'
+
+    def __repr__(self) -> str:
+        return f'x={self.x} y={self.y}'
 
     def __sub__(self, other):
         "Manhatan distance"
@@ -21,7 +31,7 @@ class Position():
 
 class MapCell():
     def __init__(self, x, y):
-        self.position = Position(x, y)
+        self.position: Position = Position(x, y)
         self.known: bool = False  # seen at least one time
         self.wall: bool = False
         self.resource: Resource = None
@@ -30,6 +40,17 @@ class MapCell():
         self.base: bool = None  # True = Enemy Base, False = Our Base
         # TODO: میشه یه متغیرتعریف کرد که مورچه های اساین شده به منبع رو نشون بده
 
+    def __eq__(self, other) -> bool:
+        if type(other) == MapCell:
+            return self.position == other.position
+        return False
+
+    def __str__(self) -> str:
+        return f'Cell[{self.position}]'
+
+    def __repr__(self) -> str:
+        return f'Cell[{self.position}]'
+
 
 class Grid():
     def __init__(self, width, height):
@@ -37,18 +58,52 @@ class Grid():
         self.height = height
         self.cells = [[MapCell(i, j) for i in range(width)]
                       for j in range(height)]
+        # self.bfs_unknown(Position(1, 1), Position(5, 5))
 
-    def __getitem__(self, position:Position):
-        return self.cells[position.y][position.x]   
+    def __getitem__(self, position: Position):
+        return self.cells[position.y][position.x]
 
-    def __setitem__(self, position:Position, value:MapCell):
+    def __setitem__(self, position: Position, value: MapCell):
         self.cells[position.y][position.x] = deepcopy(value)
-    
-    def get_harvest_location(self, position:Position)-> Position:
+
+    def fix_pos(self, pos: Position):
+        if pos.x >= self.width:
+            pos.x = 0
+        if pos.x < 0:
+            pos.x = self.width - 1
+        if pos.y >= self.height:
+            pos.y = 0
+        if pos.y < 0:
+            pos.y = self.height - 1
+        return pos
+
+    def bfs_unknown(self, start: Position, goal: Position):
+        if start == goal:
+            return [start]
+        visited = np.zeros((self.height, self.width))
+        queue = deque([(start, [])])
+
+        while queue:
+            current, path = queue.popleft()
+            visited[current.y][current.x] = 1
+
+            for k in range(4):
+                x_ = dx[k] + current.x
+                y_ = dy[k] + current.y
+                neighbor = self.fix_pos(Position(x_, y_))
+                if neighbor == goal:
+                    return path + [current, neighbor]
+                if visited[neighbor.y][neighbor.x] == 0 and self[neighbor].wall == False:
+                    queue.append((neighbor, path + [current]))
+                    visited[neighbor.y][neighbor.x] = 1
+
+        return None
+
+    def get_harvest_location(self, position: Position) -> Position:
         # we assume the nearest location is the best
         # TODO: but may be there are better choices!
-        locations = [self[Position(x,y)] for x in range(self.width) for y in range(self.height) 
-                        if self[Position].resource]
+        locations = [self[Position(x, y)] for x in range(self.width) for y in range(self.height)
+                     if self[Position].resource]
         min_distance = np.inf
         min_location = None
         for location in locations:
@@ -58,8 +113,8 @@ class Grid():
                 min_location = location
 
         return min_location
-        
-    def get_explore_location(self)-> Position:
+
+    def get_explore_location(self) -> Position:
         # TODO
         return Position(randint(0, self.height), randint(0, self.width))
 
@@ -71,9 +126,9 @@ class TaskType(Enum):
 
 
 class Task:
-    def __init__(self, type:TaskType, destination:Position):
-        self.type:TaskType = type
-        self.destination:Position = destination
+    def __init__(self, type: TaskType, destination: Position):
+        self.type: TaskType = type
+        self.destination: Position = destination
 
 
 class Env():
@@ -110,28 +165,40 @@ class Env():
 
             elif self.task.type == TaskType.HARVEST:
                 if self.ant.resource:
-                    self.task = Task(type=TaskType.RETURN, destination=self.base_pos)
+                    self.task = Task(type=TaskType.RETURN,
+                                     destination=self.base_pos)
                     return
 
-                harvest_location = self.grid.get_harvest_location(self.position)
+                harvest_location = self.grid.get_harvest_location(
+                    self.position)
                 if harvest_location != self.task.destination:
-                    self.task = Task(type=TaskType.HARVEST, destination=harvest_location)
+                    self.task = Task(type=TaskType.HARVEST,
+                                     destination=harvest_location)
                     return
                 else:
                     return
 
             elif self.task.type == TaskType.EXPLORE:
-                harvest_location = self.grid.get_harvest_location(self.position)
+                harvest_location = self.grid.get_harvest_location(
+                    self.position)
                 if harvest_location:
-                    self.task = Task(type=TaskType.HARVEST, destination=harvest_location)
+                    self.task = Task(type=TaskType.HARVEST,
+                                     destination=harvest_location)
                     return
 
         elif not self.task:
             harvest_location = self.grid.get_harvest_location(self.position)
             if harvest_location:
-                self.task = Task(type=TaskType.HARVEST, destination=harvest_location)
+                self.task = Task(type=TaskType.HARVEST,
+                                 destination=harvest_location)
                 return
             else:
                 destination = self.grid.get_explore_location()
-                self.task = Task(type=TaskType.EXPLORE, destination=destination)
+                self.task = Task(type=TaskType.EXPLORE,
+                                 destination=destination)
                 return
+
+
+g = Grid(20, 30)
+
+print(g.bfs_unknown(Position(1, 1), Position(17, 17)))
