@@ -127,7 +127,10 @@ class Grid():
         return -1
 
     def where_to_watch(self, position: Position) -> Position:
-        return position
+        strategic_points = [(position: Position, priority: int)]
+        if position not in strategic_points:
+            return position
+        # TODO: completely todo!
 
     def get_harvest_location(self, position: Position) -> Position:
         # we assume the nearest location is the best
