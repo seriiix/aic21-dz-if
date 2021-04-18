@@ -127,9 +127,11 @@ class Grid():
         return -1
 
     def where_to_watch(self, position: Position) -> Position:
-        strategic_points = [(position: Position, priority: int)]
+        # strategic_points = [(position: Position, priority: int)]
+        strategic_points = []
         if position not in strategic_points:
             return position
+        return position
         # TODO: completely todo!
 
     def get_harvest_location(self, position: Position) -> Position:
@@ -319,7 +321,7 @@ class Env():
                     return
         elif self.game.ant.antType == AntType.SARBAAZ:
             destination = self.grid.where_to_watch(self.position)
-            self.task = Task(TaskType.watch, destination)
+            self.task = Task(TaskType.WATCH, destination)
 
 
 
