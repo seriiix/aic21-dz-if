@@ -28,4 +28,6 @@ class AI:
 
         brain.ant_turn_number += 1
 
-        return ('asd', 2, 1)
+        message, value, direction = brain.env.run_one_turn()
+        
+        return (message, value, direction)

@@ -1,9 +1,9 @@
 from typing import List
 from enum import Enum
-from random import randint
+from random import randint, choice
 from copy import deepcopy
 import numpy as np
-from Model import Ant, Direction, Game, Map, Resource, ResourceType
+from Model import Ant, Direction, Game, Map, Resource, ResourceType, CellType
 from collections import deque
 from x_consts import dx, dy
 
@@ -33,11 +33,13 @@ class MapCell():
     def __init__(self, x, y):
         self.position: Position = Position(x, y)
         self.known: bool = False  # seen at least one time
+        self.invalid: bool = False # برای جاهایی که اصلا غیر ممکنه مورچه بره اونجا ها
         self.wall: bool = False
         self.resource: Resource = None
         self.resource_seen: int = None  # How many turns passed since we see the resource
         self.ants: Ant = []
-        self.base: bool = None  # True = Enemy Base, False = Our Base
+        self.base: bool = False
+        self.enemy_base = None # None means we dont know but false means that it is not! and true is true
         # TODO: میشه یه متغیرتعریف کرد که مورچه های اساین شده به منبع رو نشون بده
 
     def __eq__(self, other) -> bool:
@@ -99,11 +101,16 @@ class Grid():
         return None
 
     def get_direction(self, start: Position, goal: Position):
+        print(start)
+        print(goal)
         path = self.bfs_unknown(start, goal)
         if path is None:
             return None
         if start == goal:
             return Direction.CENTER
+
+        print(path)
+        # input()
 
         curr_step = path[0]
         next_step = path[1]
@@ -122,8 +129,8 @@ class Grid():
     def get_harvest_location(self, position: Position) -> Position:
         # we assume the nearest location is the best
         # TODO: but may be there are better choices!
-        locations = [self[Position(x, y)] for x in range(self.width) for y in range(self.height)
-                     if self[Position].resource]
+        locations = [self[Position(x, y)].position for x in range(self.width) for y in range(self.height)
+                     if self[Position(x, y)].resource]
         min_distance = np.inf
         min_location = None
         for location in locations:
@@ -134,9 +141,37 @@ class Grid():
 
         return min_location
 
-    def get_explore_location(self) -> Position:
-        # TODO
-        return Position(randint(0, self.height), randint(0, self.width))
+    def get_neighbour(self, position, direction):
+        if direction == Direction.RIGHT:
+            return self.fix_pos(Position(position.x+1, position.y))
+        elif direction == Direction.LEFT:
+            return self.fix_pos(Position(position.x-1, position.y))
+        elif direction == Direction.DOWN:
+            return self.fix_pos(Position(position.x, position.y+1))
+        elif direction == Direction.UP:
+            return self.fix_pos(Position(position.x, position.y-1))
+        elif direction == Direction.CENTER:
+            return Position(position.x, position.y)
+
+    def is_good_to_explore(self, position):
+        return self[position].known == False and self[position].invalid == False
+
+    def get_seen_cells_neighbours(self):
+        directions = [Direction.RIGHT, Direction.LEFT, Direction.UP, Direction.DOWN]
+        locations = []
+        for row in self.cells:
+            for cell in row:
+                if cell.known:
+                    for direction in directions:
+                        position = self.get_neighbour(cell.position, direction)
+                        if self.is_good_to_explore(position) and not position in locations:
+                            locations.append(position)
+        return locations
+
+    def get_explore_location(self, start: Position) -> Position:
+        # currently we just pick a random unseen but near to seens position
+        locations = self.get_seen_cells_neighbours()
+        return choice(locations) if len(locations) else start
 
 
 class TaskType(Enum):
@@ -149,6 +184,9 @@ class Task:
     def __init__(self, type: TaskType, destination: Position):
         self.type: TaskType = type
         self.destination: Position = destination
+
+    def __str__(self):
+        return f"Task(type={self.type}, dest={self.destination})"
 
 
 class Env():
@@ -164,12 +202,46 @@ class Env():
         self.game = game
         self.grid = Grid(self.game.mapWidth, self.game.mapHeight)
         self.base_pos = Position(self.game.baseX, self.game.baseY)
+        self.grid[self.base_pos].base = True
         self.position = Position(
             self.game.ant.currentX, self.game.ant.currentY)
-        self.ant = self.game.ant
 
-    def update_walls(self):
+    def add_vision_to_map(self) -> None:
+        "the ant adds its vision information to the grid"
+        vision = self.game.ant.visibleMap
+        for cell_row in vision.cells:
+            for cell in cell_row:
+                if cell:
+                    cell_pos = Position(cell.x, cell.y)
+                    # WALL
+                    if cell.type == CellType.WALL.value:
+                        self.grid[cell_pos].wall = True
+                    else:
+                        self.grid[cell_pos].wall = False
+                    
+                    # RESOURCES
+                    if cell.resource_type == ResourceType.BREAD.value:
+                        self.grid[cell_pos].resource = Resource(ResourceType.BREAD.value, cell.resource_value)
+                    if cell.resource_type == ResourceType.GRASS.value:
+                        self.grid[cell_pos].resource = Resource(ResourceType.GRASS.value, cell.resource_value)
+                    if cell.resource_value == 0:
+                        self.grid[cell_pos].resource = None
+
+                    # ANTS
+                    if len(cell.ants):
+                        self.grid[cell_pos].ants = deepcopy(cell.ants)
+
+                    # ENEMY BASE
+                    if cell.type == CellType.BASE.value:
+                        if not cell_pos==self.base_pos:
+                            self.grid[cell_pos].enemy_base = True
+                            # TODO: here we can set to False all other cells but may be not necessary
+                    else:
+                        self.grid[cell_pos].enemy_base = False
+
+    def update_grid(self):
         # own vision
+        self.add_vision_to_map()
 
         # from messages
         messages = self.game.chatBox.allChats
@@ -189,7 +261,7 @@ class Env():
 
             elif self.task.type == TaskType.HARVEST:
                 # TODO: resource threshold
-                if self.ant.currentResource and self.ant.currentResource.value > 0:
+                if self.game.ant.currentResource and self.game.ant.currentResource.value > 0:
                     self.task = Task(type=TaskType.RETURN,
                                      destination=self.base_pos)
                     return
@@ -210,6 +282,9 @@ class Env():
                     self.task = Task(type=TaskType.HARVEST,
                                      destination=harvest_location)
                     return
+                if self.position == self.task.destination:
+                    self.task = None
+                    self.update_task()
 
         elif not self.task:
             harvest_location = self.grid.get_harvest_location(self.position)
@@ -218,7 +293,18 @@ class Env():
                                  destination=harvest_location)
                 return
             else:
-                destination = self.grid.get_explore_location()
+                destination = self.grid.get_explore_location(self.position)
                 self.task = Task(type=TaskType.EXPLORE,
                                  destination=destination)
                 return
+    
+    def run_one_turn(self):
+        self.position = Position(self.game.ant.currentX, self.game.ant.currentY)
+        self.update_grid()
+        self.update_task()
+        print(self.task)
+        direction = self.grid.get_direction(self.position, self.task.destination)
+        print(direction)
+        message = "asd"
+        value = 2
+        return message, value, direction.value
