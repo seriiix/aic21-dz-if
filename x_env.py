@@ -3,7 +3,7 @@ from enum import Enum
 from random import randint, choice
 from copy import deepcopy
 import numpy as np
-from Model import Ant, Direction, Game, Map, Resource, ResourceType, CellType
+from Model import Ant, Direction, Game, Map, Resource, ResourceType, CellType, AntType
 from collections import deque
 from x_consts import dx, dy
 
@@ -34,7 +34,7 @@ class MapCell():
         self.position: Position = Position(x, y)
         self.known: bool = False  # seen at least one time
         self.invalid: bool = False # برای جاهایی که اصلا غیر ممکنه مورچه بره اونجا ها
-        self.wall: bool = False
+        self.wall: bool = False # TODO: wall needs to be None at first because we dont know!
         self.resource: Resource = None
         self.resource_seen: int = None  # How many turns passed since we see the resource
         self.ants: Ant = []
@@ -101,15 +101,15 @@ class Grid():
         return None
 
     def get_direction(self, start: Position, goal: Position):
-        print(start)
-        print(goal)
         path = self.bfs_unknown(start, goal)
         if path is None:
+            self[goal].invalid = True
+            # TODO: here we should assign INVALID to the cell. Can we deduce more from this?
             return None
         if start == goal:
             return Direction.CENTER
 
-        print(path)
+        # print(path)
         # input()
 
         curr_step = path[0]
@@ -125,6 +125,9 @@ class Grid():
             return Direction.UP
 
         return -1
+
+    def where_to_watch(self, position: Position) -> Position:
+        return position
 
     def get_harvest_location(self, position: Position) -> Position:
         # we assume the nearest location is the best
@@ -154,7 +157,7 @@ class Grid():
             return Position(position.x, position.y)
 
     def is_good_to_explore(self, position):
-        return self[position].known == False and self[position].invalid == False
+        return self[position].known == False and self[position].invalid == False and self[position].wall == False
 
     def get_seen_cells_neighbours(self):
         directions = [Direction.RIGHT, Direction.LEFT, Direction.UP, Direction.DOWN]
@@ -166,6 +169,7 @@ class Grid():
                         position = self.get_neighbour(cell.position, direction)
                         if self.is_good_to_explore(position) and not position in locations:
                             locations.append(position)
+        print(locations)
         return locations
 
     def get_explore_location(self, start: Position) -> Position:
@@ -178,6 +182,8 @@ class TaskType(Enum):
     EXPLORE = 0
     HARVEST = 1
     RETURN = 2
+    
+    WATCH = 3
 
 
 class Task:
@@ -213,6 +219,9 @@ class Env():
             for cell in cell_row:
                 if cell:
                     cell_pos = Position(cell.x, cell.y)
+                    
+                    self.grid[cell_pos].known = True
+
                     # WALL
                     if cell.type == CellType.WALL.value:
                         self.grid[cell_pos].wall = True
@@ -251,59 +260,77 @@ class Env():
 
     def update_task(self):
         "analyzes the map and trys to get the most important task"
-        if self.task:
-            if self.task.type == TaskType.RETURN:
-                if self.position == self.base_pos:
-                    self.task = None
-                    return self.update_task()
-                else:
-                    return
+        if self.game.ant.antType == AntType.KARGAR:
+            if self.task:
+                if self.task.type == TaskType.RETURN:
+                    if self.position == self.base_pos:
+                        self.task = None
+                        return self.update_task()
+                    else:
+                        return
 
-            elif self.task.type == TaskType.HARVEST:
-                # TODO: resource threshold
-                if self.game.ant.currentResource and self.game.ant.currentResource.value > 0:
-                    self.task = Task(type=TaskType.RETURN,
-                                     destination=self.base_pos)
-                    return
+                elif self.task.type == TaskType.HARVEST:
+                    # TODO: resource threshold
+                    if self.game.ant.currentResource and self.game.ant.currentResource.value > 0:
+                        self.task = Task(type=TaskType.RETURN,
+                                        destination=self.base_pos)
+                        return
 
-                harvest_location = self.grid.get_harvest_location(
-                    self.position)
-                if harvest_location != self.task.destination:
-                    self.task = Task(type=TaskType.HARVEST,
-                                     destination=harvest_location)
-                    return
-                else:
-                    return
+                    harvest_location = self.grid.get_harvest_location(
+                        self.position)
+                    if not harvest_location: # Resource has been eaten by others
+                        self.task = None
+                        self.update_task()
+                        return
+                    elif harvest_location != self.task.destination:
+                        self.task = Task(type=TaskType.HARVEST,
+                                        destination=harvest_location)
+                        return
+                    else:
+                        return
 
-            elif self.task.type == TaskType.EXPLORE:
-                harvest_location = self.grid.get_harvest_location(
-                    self.position)
+                elif self.task.type == TaskType.EXPLORE:
+                    harvest_location = self.grid.get_harvest_location(
+                        self.position)
+                    if harvest_location:
+                        self.task = Task(type=TaskType.HARVEST,
+                                        destination=harvest_location)
+                        return
+                    if not self.grid.is_good_to_explore(self.task.destination):
+                        self.task = None
+                        self.update_task()
+                    if self.position == self.task.destination:
+                        self.task = None
+                        self.update_task()
+
+            elif not self.task:
+                harvest_location = self.grid.get_harvest_location(self.position)
                 if harvest_location:
                     self.task = Task(type=TaskType.HARVEST,
-                                     destination=harvest_location)
+                                    destination=harvest_location)
                     return
-                if self.position == self.task.destination:
-                    self.task = None
-                    self.update_task()
+                else:
+                    destination = self.grid.get_explore_location(self.position)
+                    self.task = Task(type=TaskType.EXPLORE,
+                                    destination=destination)
+                    return
+        elif self.game.ant.antType == AntType.SARBAAZ:
+            destination = self.grid.where_to_watch(self.position)
+            self.task = Task(TaskType.watch, destination)
 
-        elif not self.task:
-            harvest_location = self.grid.get_harvest_location(self.position)
-            if harvest_location:
-                self.task = Task(type=TaskType.HARVEST,
-                                 destination=harvest_location)
-                return
-            else:
-                destination = self.grid.get_explore_location(self.position)
-                self.task = Task(type=TaskType.EXPLORE,
-                                 destination=destination)
-                return
-    
+
+
     def run_one_turn(self):
         self.position = Position(self.game.ant.currentX, self.game.ant.currentY)
         self.update_grid()
         self.update_task()
         print(self.task)
         direction = self.grid.get_direction(self.position, self.task.destination)
+        if not direction:
+            self.task = None
+            direction = Direction.CENTER.value
+            print("=====WAITING=====")
+            # TODO: here waits for 1 turn. can we do better?
         print(direction)
         message = "asd"
         value = 2
