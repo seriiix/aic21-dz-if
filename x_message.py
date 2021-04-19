@@ -60,7 +60,7 @@ class Chat():
         self.data = data
 
     def __str__(self) -> str:
-        return f"{self.type} {self.data}"
+        return f"({self.type} {self.data})"
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -77,7 +77,7 @@ class ChatObservationSimple():
         self.MESSAGE_BITS = self.POSITION_BITS + self.CELL_KIND_BITS
 
     def __str__(self) -> str:
-        return f"({self.position} {self.cell_kind})"
+        return f"{self.position} {self.cell_kind}"
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -96,7 +96,7 @@ class ChatObservationValue():
         self.MESSAGE_BITS = self.POSITION_BITS + self.CELL_KIND_BITS + self.VALUE_BITS
 
     def __str__(self) -> str:
-        return f"({self.position} {self.cell_kind} {self.value})"
+        return f"{self.position} {self.cell_kind} {self.value}"
 
     def __repr__(self) -> str:
         return self.__str__()
