@@ -77,7 +77,7 @@ class ChatObservationSimple():
         self.MESSAGE_BITS = self.POSITION_BITS + self.CELL_KIND_BITS
 
     def __str__(self) -> str:
-        return f"{self.position} {self.cell_kind}"
+        return f"({self.position} {self.cell_kind})"
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -96,7 +96,7 @@ class ChatObservationValue():
         self.MESSAGE_BITS = self.POSITION_BITS + self.CELL_KIND_BITS + self.VALUE_BITS
 
     def __str__(self) -> str:
-        return f"{self.position} {self.cell_kind} {self.value}"
+        return f"({self.position} {self.cell_kind} {self.value})"
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -120,6 +120,7 @@ def encode(ant_id, messages: List[Chat]) -> str:
     bits_remaining -= len(ant_id_bin)
 
     for msg in messages:
+
         # for OBSERVATION_SIMPLE
         if msg.type == ChatKind.OBSERVATION_SIMPLE:
             if bits_remaining >= msg.data.MESSAGE_BITS + CHAT_KIND_BITS:
@@ -130,6 +131,7 @@ def encode(ant_id, messages: List[Chat]) -> str:
                 s += to_bin_with_fixed_length(msg.data.cell_kind.value,
                                               msg.data.CELL_KIND_BITS)
                 bits_remaining -= msg.data.MESSAGE_BITS + CHAT_KIND_BITS
+
         # for OBSERVATION_VALUE
         if msg.type == ChatKind.OBSERVATION_VALUE:
             if bits_remaining >= msg.data.MESSAGE_BITS + CHAT_KIND_BITS:
@@ -142,10 +144,6 @@ def encode(ant_id, messages: List[Chat]) -> str:
                 s += to_bin_with_fixed_length(msg.data.value,
                                               msg.data.VALUE_BITS)
                 bits_remaining -= msg.data.MESSAGE_BITS + CHAT_KIND_BITS
-
-    if bits_remaining >= CHAT_KIND_BITS:
-        s += ChatKind.END.value
-        bits_remaining -= CHAT_KIND_BITS
 
     final = ''
 
@@ -225,7 +223,7 @@ if __name__ == '__main__':
                       Position(3, 4), CellKind.GRASS, 55))
 
     e = encode(
-        1337, [f_msg1, f_msg2])
+        1337, [f_msg1, f_msg2, f_msg2, f_msg1])
     print('length of encoded msg:', len(e))
     ant_id, msgs = decode(e)
     print('decoded msg:', ant_id, msgs)
