@@ -9,7 +9,7 @@ from x_env import Env
 class Brain:
     def __init__(self):
         self.env = Env()
-        self.ant_id = randint(0, 2 ^ 16 - 1)
+        self.ant_id = randint(0, 2 ^ 12 - 1)
         self.ant_turn_number = 0
 
 
@@ -29,5 +29,5 @@ class AI:
         brain.ant_turn_number += 1
 
         message, value, direction = brain.env.run_one_turn()
-        
+
         return (message, value, direction)

@@ -6,40 +6,21 @@ import numpy as np
 from Model import Ant, Direction, Game, Map, Resource, ResourceType, CellType, AntType
 from collections import deque
 from x_consts import dx, dy
-
-
-class Position():
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-
-    def __eq__(self, other) -> bool:
-        if type(other) == Position:
-            return self.x == other.x and self.y == other.y
-        return False
-
-    def __str__(self) -> str:
-        return f'x={self.x} y={self.y}'
-
-    def __repr__(self) -> str:
-        return f'x={self.x} y={self.y}'
-
-    def __sub__(self, other):
-        "Manhatan distance"
-        return abs(self.x - other.x) + abs(self.y - other.y)
+from x_helpers import Position
 
 
 class MapCell():
     def __init__(self, x, y):
         self.position: Position = Position(x, y)
         self.known: bool = False  # seen at least one time
-        self.invalid: bool = False # برای جاهایی که اصلا غیر ممکنه مورچه بره اونجا ها
-        self.wall: bool = False # TODO: wall needs to be None at first because we dont know!
+        self.invalid: bool = False  # برای جاهایی که اصلا غیر ممکنه مورچه بره اونجا ها
+        self.wall: bool = False  # TODO: wall needs to be None at first because we dont know!
         self.resource: Resource = None
         self.resource_seen: int = None  # How many turns passed since we see the resource
         self.ants: Ant = []
         self.base: bool = False
-        self.enemy_base = None # None means we dont know but false means that it is not! and true is true
+        # None means we dont know but false means that it is not! and true is true
+        self.enemy_base = None
         # TODO: میشه یه متغیرتعریف کرد که مورچه های اساین شده به منبع رو نشون بده
 
     def __eq__(self, other) -> bool:
@@ -165,7 +146,8 @@ class Grid():
         return self[position].known == False and self[position].invalid == False and self[position].wall == False
 
     def get_seen_cells_neighbours(self):
-        directions = [Direction.RIGHT, Direction.LEFT, Direction.UP, Direction.DOWN]
+        directions = [Direction.RIGHT, Direction.LEFT,
+                      Direction.UP, Direction.DOWN]
         locations = []
         for row in self.cells:
             for cell in row:
@@ -187,7 +169,7 @@ class TaskType(Enum):
     EXPLORE = 0
     HARVEST = 1
     RETURN = 2
-    
+
     WATCH = 3
 
 
@@ -224,7 +206,7 @@ class Env():
             for cell in cell_row:
                 if cell:
                     cell_pos = Position(cell.x, cell.y)
-                    
+
                     self.grid[cell_pos].known = True
 
                     # WALL
@@ -232,12 +214,14 @@ class Env():
                         self.grid[cell_pos].wall = True
                     else:
                         self.grid[cell_pos].wall = False
-                    
+
                     # RESOURCES
                     if cell.resource_type == ResourceType.BREAD.value:
-                        self.grid[cell_pos].resource = Resource(ResourceType.BREAD.value, cell.resource_value)
+                        self.grid[cell_pos].resource = Resource(
+                            ResourceType.BREAD.value, cell.resource_value)
                     if cell.resource_type == ResourceType.GRASS.value:
-                        self.grid[cell_pos].resource = Resource(ResourceType.GRASS.value, cell.resource_value)
+                        self.grid[cell_pos].resource = Resource(
+                            ResourceType.GRASS.value, cell.resource_value)
                     if cell.resource_value == 0:
                         self.grid[cell_pos].resource = None
 
@@ -247,7 +231,7 @@ class Env():
 
                     # ENEMY BASE
                     if cell.type == CellType.BASE.value:
-                        if not cell_pos==self.base_pos:
+                        if not cell_pos == self.base_pos:
                             self.grid[cell_pos].enemy_base = True
                             # TODO: here we can set to False all other cells but may be not necessary
                     else:
@@ -278,18 +262,18 @@ class Env():
                     # TODO: resource threshold
                     if self.game.ant.currentResource and self.game.ant.currentResource.value > 0:
                         self.task = Task(type=TaskType.RETURN,
-                                        destination=self.base_pos)
+                                         destination=self.base_pos)
                         return
 
                     harvest_location = self.grid.get_harvest_location(
                         self.position)
-                    if not harvest_location: # Resource has been eaten by others
+                    if not harvest_location:  # Resource has been eaten by others
                         self.task = None
                         self.update_task()
                         return
                     elif harvest_location != self.task.destination:
                         self.task = Task(type=TaskType.HARVEST,
-                                        destination=harvest_location)
+                                         destination=harvest_location)
                         return
                     else:
                         return
@@ -299,7 +283,7 @@ class Env():
                         self.position)
                     if harvest_location:
                         self.task = Task(type=TaskType.HARVEST,
-                                        destination=harvest_location)
+                                         destination=harvest_location)
                         return
                     if not self.grid.is_good_to_explore(self.task.destination):
                         self.task = None
@@ -309,28 +293,29 @@ class Env():
                         self.update_task()
 
             elif not self.task:
-                harvest_location = self.grid.get_harvest_location(self.position)
+                harvest_location = self.grid.get_harvest_location(
+                    self.position)
                 if harvest_location:
                     self.task = Task(type=TaskType.HARVEST,
-                                    destination=harvest_location)
+                                     destination=harvest_location)
                     return
                 else:
                     destination = self.grid.get_explore_location(self.position)
                     self.task = Task(type=TaskType.EXPLORE,
-                                    destination=destination)
+                                     destination=destination)
                     return
         elif self.game.ant.antType == AntType.SARBAAZ:
             destination = self.grid.where_to_watch(self.position)
             self.task = Task(TaskType.WATCH, destination)
 
-
-
     def run_one_turn(self):
-        self.position = Position(self.game.ant.currentX, self.game.ant.currentY)
+        self.position = Position(
+            self.game.ant.currentX, self.game.ant.currentY)
         self.update_grid()
         self.update_task()
         print(self.task)
-        direction = self.grid.get_direction(self.position, self.task.destination)
+        direction = self.grid.get_direction(
+            self.position, self.task.destination)
         if not direction:
             self.task = None
             direction = Direction.CENTER.value
