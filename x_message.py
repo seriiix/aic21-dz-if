@@ -175,6 +175,8 @@ def parser(bin):
         # OBSERVATION_SIMPLE
         if chat_kind == ChatKind.OBSERVATION_SIMPLE.value:
             chat = ChatObservationSimple()
+            if len(bin) < chat.MESSAGE_BITS:
+                break
             pos = ord(chr(int(bin[:chat.POSITION_BITS], 2)))
             pos = hash_index_to_pos[pos]
             chat.position = Position(pos[0], pos[1])
@@ -188,6 +190,8 @@ def parser(bin):
         # OBSERVATION_VALUE
         if chat_kind == ChatKind.OBSERVATION_VALUE.value:
             chat = ChatObservationValue()
+            if len(bin) < chat.MESSAGE_BITS:
+                break
             pos = ord(chr(int(bin[:chat.POSITION_BITS], 2)))
             pos = hash_index_to_pos[pos]
             chat.position = Position(pos[0], pos[1])
