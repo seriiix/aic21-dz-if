@@ -32,7 +32,7 @@ for i in range(35):
 
 
 class ChatKind(Enum):
-    OBSERVATION = '111'
+    OBSERVATION = '000'
 
     END = '111'
 
