@@ -4,7 +4,7 @@
 # antID | ChatKind | fixedLengthMessages(n)
 
 # Types
-# Observation:
+# OBSERVATION_SIMPLE:
 # ChatKind = 000
 # messages | type
 
@@ -17,7 +17,7 @@ MESSAGE_LENGTH = 32
 CHAR_BITS = 8
 #
 ANT_ID_BITS = 12
-MESSAGE_TYPE_BITS = 3
+CHAT_KIND_BITS = 3
 
 # hashes
 hash_index = 0
@@ -32,7 +32,8 @@ for i in range(35):
 
 
 class ChatKind(Enum):
-    OBSERVATION = '000'
+    OBSERVATION_SIMPLE = '000'  # [position + kind]
+    OBSERVATION_VALUE = '001'  # [position + kind + value]
 
     END = '111'
 
@@ -65,10 +66,10 @@ class Chat():
         return self.__str__()
 
 
-class ChatObservation():
+class ChatObservationSimple():
     def __init__(self, position=None, cell_kind=None) -> None:
-        self.position: Position = position  # 15 bits
-        self.cell_kind: CellKind = cell_kind  # 4 bits
+        self.position: Position = position
+        self.cell_kind: CellKind = cell_kind
 
         # CONSTS
         self.POSITION_BITS = 15
@@ -77,6 +78,25 @@ class ChatObservation():
 
     def __str__(self) -> str:
         return f"{self.position} {self.cell_kind}"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
+class ChatObservationValue():
+    def __init__(self, position=None, cell_kind=None, value=None) -> None:
+        self.position: Position = position
+        self.cell_kind: CellKind = cell_kind
+        self.value: int = value
+
+        # CONSTS
+        self.POSITION_BITS = 15
+        self.CELL_KIND_BITS = 4
+        self.VALUE_BITS = 10
+        self.MESSAGE_BITS = self.POSITION_BITS + self.CELL_KIND_BITS + self.VALUE_BITS
+
+    def __str__(self) -> str:
+        return f"{self.position} {self.cell_kind} {self.value}"
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -92,37 +112,46 @@ def to_bin_with_fixed_length(dec: int, goal_len: int):
 def encode(ant_id, messages: List[Chat]) -> str:
     "encode a message into multi-message format"
     s = ''
-    bits_remaining = 32 * 8
+    bits_remaining = MESSAGE_LENGTH * CHAR_BITS
 
     # create ant id with ANT_ID_BITS bits
     ant_id_bin = to_bin_with_fixed_length(ant_id, ANT_ID_BITS)
-    bits_remaining -= len(ant_id_bin)
     s += ant_id_bin
-
-    # handling observations
-    if bits_remaining >= MESSAGE_TYPE_BITS:
-        s += ChatKind.OBSERVATION.value
-        bits_remaining -= MESSAGE_TYPE_BITS
-    else:
-        return s
+    bits_remaining -= len(ant_id_bin)
 
     for msg in messages:
-        if msg.type == ChatKind.OBSERVATION:
-            if bits_remaining >= msg.data.MESSAGE_BITS:
+        # for OBSERVATION_SIMPLE
+        if msg.type == ChatKind.OBSERVATION_SIMPLE:
+            if bits_remaining >= msg.data.MESSAGE_BITS + CHAT_KIND_BITS:
+                s += ChatKind.OBSERVATION_SIMPLE.value
                 idx = hash_pos_to_index[(
                     msg.data.position.x, msg.data.position.y)]
                 s += to_bin_with_fixed_length(idx, msg.data.POSITION_BITS)
                 s += to_bin_with_fixed_length(msg.data.cell_kind.value,
                                               msg.data.CELL_KIND_BITS)
-                bits_remaining -= msg.data.MESSAGE_BITS
+                bits_remaining -= msg.data.MESSAGE_BITS + CHAT_KIND_BITS
+        # for OBSERVATION_VALUE
+        if msg.type == ChatKind.OBSERVATION_VALUE:
+            if bits_remaining >= msg.data.MESSAGE_BITS + CHAT_KIND_BITS:
+                s += ChatKind.OBSERVATION_VALUE.value
+                idx = hash_pos_to_index[(
+                    msg.data.position.x, msg.data.position.y)]
+                s += to_bin_with_fixed_length(idx, msg.data.POSITION_BITS)
+                s += to_bin_with_fixed_length(msg.data.cell_kind.value,
+                                              msg.data.CELL_KIND_BITS)
+                s += to_bin_with_fixed_length(msg.data.value,
+                                              msg.data.VALUE_BITS)
+                bits_remaining -= msg.data.MESSAGE_BITS + CHAT_KIND_BITS
 
-    if bits_remaining >= MESSAGE_TYPE_BITS:
+    if bits_remaining >= CHAT_KIND_BITS:
         s += ChatKind.END.value
+        bits_remaining -= CHAT_KIND_BITS
 
     final = ''
 
     while len(s) % CHAR_BITS != 0:
         s += '0'
+        bits_remaining -= 1
 
     cntr = len(s) // CHAR_BITS
 
@@ -140,22 +169,39 @@ def parser(bin):
 
     msgs = []
 
-    while len(bin) > MESSAGE_TYPE_BITS:
+    while len(bin) > CHAT_KIND_BITS:
 
-        chat_kind = bin[:MESSAGE_TYPE_BITS]
-        bin = bin[MESSAGE_TYPE_BITS:]
-        if chat_kind == ChatKind.OBSERVATION.value:
-            chat = ChatObservation()
-            while len(bin) >= chat.MESSAGE_BITS:
-                pos = ord(chr(int(bin[:chat.POSITION_BITS], 2)))
-                pos = hash_index_to_pos[pos]
-                chat.position = Position(pos[0], pos[1])
-                bin = bin[chat.POSITION_BITS:]
-                kind = ord(chr(int(bin[:chat.CELL_KIND_BITS], 2)))
-                chat.cell_kind = CellKind(kind)
-                bin = bin[chat.CELL_KIND_BITS:]
-                msgs.append(
-                    Chat(type=ChatKind.OBSERVATION, data=deepcopy(chat)))
+        chat_kind = bin[:CHAT_KIND_BITS]
+        bin = bin[CHAT_KIND_BITS:]
+
+        # OBSERVATION_SIMPLE
+        if chat_kind == ChatKind.OBSERVATION_SIMPLE.value:
+            chat = ChatObservationSimple()
+            pos = ord(chr(int(bin[:chat.POSITION_BITS], 2)))
+            pos = hash_index_to_pos[pos]
+            chat.position = Position(pos[0], pos[1])
+            bin = bin[chat.POSITION_BITS:]
+            kind = ord(chr(int(bin[:chat.CELL_KIND_BITS], 2)))
+            chat.cell_kind = CellKind(kind)
+            bin = bin[chat.CELL_KIND_BITS:]
+            msgs.append(
+                Chat(type=ChatKind.OBSERVATION_SIMPLE, data=deepcopy(chat)))
+
+        # OBSERVATION_VALUE
+        if chat_kind == ChatKind.OBSERVATION_VALUE.value:
+            chat = ChatObservationValue()
+            pos = ord(chr(int(bin[:chat.POSITION_BITS], 2)))
+            pos = hash_index_to_pos[pos]
+            chat.position = Position(pos[0], pos[1])
+            bin = bin[chat.POSITION_BITS:]
+            kind = ord(chr(int(bin[:chat.CELL_KIND_BITS], 2)))
+            chat.cell_kind = CellKind(kind)
+            bin = bin[chat.CELL_KIND_BITS:]
+            value = ord(chr(int(bin[:chat.VALUE_BITS], 2)))
+            chat.value = value
+            bin = bin[chat.VALUE_BITS:]
+            msgs.append(
+                Chat(type=ChatKind.OBSERVATION_VALUE, data=deepcopy(chat)))
 
     return ant_id, msgs
 
@@ -170,14 +216,16 @@ def decode(msg: str):
 
 # tests
 if __name__ == '__main__':
-    observation_msg = Chat(type=ChatKind.OBSERVATION,
-                           data=ChatObservation(
-                               Position(34, 34), CellKind.WALL))
+    f_msg1 = Chat(type=ChatKind.OBSERVATION_SIMPLE,
+                  data=ChatObservationSimple(
+                      Position(15, 12), CellKind.WALL))
 
-    observation_msg2 = Chat(type=ChatKind.OBSERVATION,
-                            data=ChatObservation(
-                                Position(0, 0), CellKind.GRASS))
+    f_msg2 = Chat(type=ChatKind.OBSERVATION_VALUE,
+                  data=ChatObservationValue(
+                      Position(3, 4), CellKind.GRASS, 55))
 
-    e = encode(1337, [observation_msg, observation_msg2, observation_msg])
-    id, msgs = decode(e)
-    print('decoded', id, msgs)
+    e = encode(
+        1337, [f_msg1, f_msg2])
+    print('length of encoded msg:', len(e))
+    ant_id, msgs = decode(e)
+    print('decoded msg:', ant_id, msgs)
