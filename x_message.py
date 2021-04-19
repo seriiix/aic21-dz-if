@@ -154,7 +154,8 @@ def parser(bin):
                 kind = ord(chr(int(bin[:chat.CELL_KIND_BITS], 2)))
                 chat.cell_kind = CellKind(kind)
                 bin = bin[chat.CELL_KIND_BITS:]
-                msgs.append(Chat(type=ChatKind.OBSERVATION, data=chat))
+                msgs.append(
+                    Chat(type=ChatKind.OBSERVATION, data=deepcopy(chat)))
 
     return ant_id, msgs
 
