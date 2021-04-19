@@ -169,15 +169,14 @@ def decode(msg: str):
 
 
 # tests
-""" observation_msg = Chat(type=ChatKind.OBSERVATION,
+observation_msg = Chat(type=ChatKind.OBSERVATION,
                        data=ChatObservation(
                            Position(34, 34), CellKind.WALL))
 
-observation_msg = Chat(type=ChatKind.OBSERVATION,
-                       data=ChatObservation(
-                           Position(0, 0), CellKind.GRASS))
+observation_msg2 = Chat(type=ChatKind.OBSERVATION,
+                        data=ChatObservation(
+                            Position(0, 0), CellKind.GRASS))
 
-e = encode(1337, [observation_msg, observation_msg, observation_msg])
+e = encode(1337, [observation_msg, observation_msg2, observation_msg])
 id, msgs = decode(e)
 print('decoded', id, msgs)
- """
