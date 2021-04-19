@@ -3,9 +3,9 @@ from enum import Enum
 from random import randint, choice
 from copy import deepcopy
 import numpy as np
-from Model import Ant, Direction, Game, Map, Resource, ResourceType, CellType, AntType
+from Model import Ant, Direction, Game, Map, Resource, ResourceType, CellType, AntType, AntTeam
 from collections import deque
-from x_consts import dx, dy
+from x_consts import *
 from x_helpers import Position
 
 
@@ -15,13 +15,20 @@ class MapCell():
         self.known: bool = False  # seen at least one time
         self.invalid: bool = False  # برای جاهایی که اصلا غیر ممکنه مورچه بره اونجا ها
         self.wall: bool = False  # TODO: wall needs to be None at first because we dont know!
+        self.last_seen: int = -np.inf  # How many turns passed since we see the resource
+
         self.resource: Resource = None
-        self.resource_seen: int = None  # How many turns passed since we see the resource
-        self.ants: Ant = []
+        self.grass_value = 0
+        self.bread_value = 0
+
         self.base: bool = False
         # None means we dont know but false means that it is not! and true is true
         self.enemy_base = None
         # TODO: میشه یه متغیرتعریف کرد که مورچه های اساین شده به منبع رو نشون بده
+        self.our_workers = 0
+        self.our_soldiers = 0
+        self.enemy_workers = 0
+        self.enemy_soldiers = 0
 
     def __eq__(self, other) -> bool:
         if type(other) == MapCell:
@@ -34,11 +41,32 @@ class MapCell():
     def __repr__(self) -> str:
         return f'Cell[{self.position}]'
 
+    def get_resource_score(self):
+        return self.grass_value * GRASS_SCORE + self.bread_value * BREAD_SCORE
+
+    def set_ants(self, ants):
+        self.our_workers = 0
+        self.our_soldiers = 0
+        self.enemy_workers = 0
+        self.enemy_soldiers = 0
+        for ant in ants:
+            if ant.antTeam == AntTeam.ALLIED.value:
+                if ant.antType == AntType.KARGAR.value:
+                    self.our_workers += 1
+                elif ant.antType == AntType.SARBAAZ.value:
+                    self.our_soldiers += 1
+            elif ant.antTeam == AntTeam.ENEMY.value:
+                if ant.antType == AntType.KARGAR.value:
+                    self.enemy_workers += 1
+                elif ant.antType == AntType.SARBAAZ.value:
+                    self.enemy_soldiers += 1
+
 
 class Grid():
-    def __init__(self, width, height):
+    def __init__(self, width, height, base_pos):
         self.width = width
         self.height = height
+        self.base_pos = base_pos
         self.cells = [[MapCell(i, j) for i in range(width)]
                       for j in range(height)]
 
@@ -107,13 +135,50 @@ class Grid():
 
         return -1
 
+    def get_strategic_score(self, position: Position, cell: MapCell)-> int:
+        if cell.invalid:
+            return -np.inf
+        # if not cell.known:
+        #     return -np.inf
+
+        path = self.bfs_unknown(position, cell.position)
+        if not path: 
+            return -np.inf
+        else:
+            distance = len(path)
+            path_to_base = self.bfs_unknown(position, self.base_pos)
+            distance_to_base = len(path_to_base)
+            resource_score = cell.get_resource_score()
+            resource_reliableness = cell.last_seen
+            self_soldiers_in_cell = cell.our_soldiers
+            unknown = int(not cell.known)
+            # self_workers_in_cell = cell.get_self_workers_count()
+
+            return distance + distance_to_base + resource_score/ abs(resource_reliableness)
+        
+    def get_strategic_points(self, position: Position) :
+        "returns list of (score, cells) decsending by score "
+        cells = []
+        for row in self.cells:
+            for cell in row:
+                cells.append((self.get_strategic_score(position, cell), cell))
+        cells.sort(key=lambda item: -item[0])
+        return cells
+
     def where_to_watch(self, position: Position) -> Position:
         # strategic_points = [(position: Position, priority: int)]
-        strategic_points = []
-        if position not in strategic_points:
+        strategic_points = self.get_strategic_points(position)
+        # TODO: may be we can add some randomness here if needed
+        best_point_score, best_point = strategic_points[0]
+        if self.get_strategic_score(position, self[position]) != best_point_score:
+            return best_point.position
+        else:
             return position
-        return position
-        # TODO: completely todo!
+
+    def update_last_seens(self):
+        for row in self.cells:
+            for cell in row:
+                cell.last_seen -= 1
 
     def get_harvest_location(self, position: Position) -> Position:
         # we assume the nearest location is the best
@@ -123,7 +188,9 @@ class Grid():
         min_distance = np.inf
         min_location = None
         for location in locations:
-            distance = location - position
+            path = self.bfs_unknown(position, location)
+            distance = len(path) if path is not None else np.inf
+            # distance = location - position
             if distance < min_distance:
                 min_distance = distance
                 min_location = location
@@ -193,8 +260,8 @@ class Env():
 
     def init_grid(self, game):
         self.game = game
-        self.grid = Grid(self.game.mapWidth, self.game.mapHeight)
         self.base_pos = Position(self.game.baseX, self.game.baseY)
+        self.grid = Grid(self.game.mapWidth, self.game.mapHeight, self.base_pos)
         self.grid[self.base_pos].base = True
         self.position = Position(
             self.game.ant.currentX, self.game.ant.currentY)
@@ -206,6 +273,8 @@ class Env():
             for cell in cell_row:
                 if cell:
                     cell_pos = Position(cell.x, cell.y)
+
+                    self.grid[cell_pos].last_seen = 0
 
                     self.grid[cell_pos].known = True
 
@@ -219,15 +288,18 @@ class Env():
                     if cell.resource_type == ResourceType.BREAD.value:
                         self.grid[cell_pos].resource = Resource(
                             ResourceType.BREAD.value, cell.resource_value)
+                        self.grid[cell_pos].bread_value = cell.resource_value
                     if cell.resource_type == ResourceType.GRASS.value:
                         self.grid[cell_pos].resource = Resource(
                             ResourceType.GRASS.value, cell.resource_value)
+                        self.grid[cell_pos].grass_value = cell.resource_value
                     if cell.resource_value == 0:
                         self.grid[cell_pos].resource = None
-
+                        self.grid[cell_pos].bread_value = 0
+                        self.grid[cell_pos].grass_value = 0
+                
                     # ANTS
-                    if len(cell.ants):
-                        self.grid[cell_pos].ants = deepcopy(cell.ants)
+                    self.grid[cell_pos].set_ants(cell.ants)                    
 
                     # ENEMY BASE
                     if cell.type == CellType.BASE.value:
@@ -236,6 +308,7 @@ class Env():
                             # TODO: here we can set to False all other cells but may be not necessary
                     else:
                         self.grid[cell_pos].enemy_base = False
+        self.grid.update_last_seens()
 
     def update_grid(self):
         # own vision
