@@ -155,7 +155,7 @@ class Grid():
             # self_workers_in_cell = cell.get_self_workers_count()
 
             return distance + distance_to_base + resource_score/ abs(resource_reliableness)
-        
+
     def get_strategic_points(self, position: Position) :
         "returns list of (score, cells) decsending by score "
         cells = []
@@ -236,8 +236,9 @@ class TaskType(Enum):
     EXPLORE = 0
     HARVEST = 1
     RETURN = 2
+    FLEE = 3
 
-    WATCH = 3
+    WATCH = 4
 
 
 class Task:
