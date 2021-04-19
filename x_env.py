@@ -249,7 +249,7 @@ class Env():
 
     def update_task(self):
         "analyzes the map and trys to get the most important task"
-        if self.game.ant.antType == AntType.KARGAR:
+        if self.game.ant.antType == AntType.KARGAR.value:
             if self.task:
                 if self.task.type == TaskType.RETURN:
                     if self.position == self.base_pos:
@@ -304,7 +304,7 @@ class Env():
                     self.task = Task(type=TaskType.EXPLORE,
                                      destination=destination)
                     return
-        elif self.game.ant.antType == AntType.SARBAAZ:
+        elif self.game.ant.antType == AntType.SARBAAZ.value:
             destination = self.grid.where_to_watch(self.position)
             self.task = Task(TaskType.WATCH, destination)
 
