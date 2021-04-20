@@ -42,6 +42,10 @@ class CellKind(Enum):
     WALL = 0
     GRASS = 1
     BREAD = 2
+    UNSAFE = 3
+    ENEMY_BASE = 4
+    ENEMY_WORKER = 5
+    ENEMY_SOLDIER = 6
 
     @staticmethod
     def get_value(kind: int):
@@ -51,6 +55,14 @@ class CellKind(Enum):
             return CellKind.GRASS
         if kind == 2:
             return CellKind.BREAD
+        if kind == 3:
+            return CellKind.UNSAFE
+        if kind == 4:
+            return CellKind.ENEMY_BASE
+        if kind == 5:
+            return CellKind.ENEMY_WORKER
+        if kind == 6:
+            return CellKind.ENEMY_SOLDIER
         return None
 
 
@@ -82,6 +94,9 @@ class ChatObservationSimple():
     def __repr__(self) -> str:
         return self.__str__()
 
+    def get_score(self):
+        return 1
+
 
 class ChatObservationValue():
     def __init__(self, position=None, cell_kind=None, value=None) -> None:
@@ -94,6 +109,9 @@ class ChatObservationValue():
         self.CELL_KIND_BITS = 4
         self.VALUE_BITS = 10
         self.MESSAGE_BITS = self.POSITION_BITS + self.CELL_KIND_BITS + self.VALUE_BITS
+
+    def get_score(self):
+        return 1
 
     def __str__(self) -> str:
         return f"{self.position} {self.cell_kind} {self.value}"

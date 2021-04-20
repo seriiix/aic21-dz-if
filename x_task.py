@@ -1,14 +1,20 @@
 from enum import Enum
-
+from x_helpers import Position
 
 class TaskType(Enum):
     EXPLORE = 0
     HARVEST = 1
-    START = 2
+    RETURN = 2
+    FLEE = 3
+
+    WATCH = 4
 
 
-class Task():
+class Task:
+    def __init__(self, type: TaskType, destination: Position):
+        self.type: TaskType = type
+        self.destination: Position = destination
 
-    def __init__(self, priority, task_type):
-        self.priority = priority
-        self.task_type = task_type
+    def __str__(self):
+        return f"Task(type={self.type}, dest={self.destination})"
+
