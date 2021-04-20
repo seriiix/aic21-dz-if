@@ -298,11 +298,6 @@ class Env():
             self.task = Task(TaskType.WATCH, destination)
 
     def generate_message(self, direction, ant_id):
-        messages = [(message, message.data.get_score()) for message in self.messages]
-        messages.sort(key=lambda item: -item[1])
-        messages = [x[0] for x in messages]
-        
-        # TODO: set ant_id
         message, priority = encode(ant_id, messages)
         return message, priority
 
