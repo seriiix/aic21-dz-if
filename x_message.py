@@ -70,9 +70,10 @@ class Chat():
     def __init__(self, type, data) -> None:
         self.type: ChatKind = type
         self.data = data
+        self.score = self.data.score
 
     def __str__(self) -> str:
-        return f"({self.type} {self.data})"
+        return f"({self.type} {self.data} sc={self.score})"
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -82,11 +83,25 @@ class ChatObservationSimple():
     def __init__(self, position=None, cell_kind=None) -> None:
         self.position: Position = position
         self.cell_kind: CellKind = cell_kind
+        self.score = self.get_score()
 
         # CONSTS
         self.POSITION_BITS = 15
         self.CELL_KIND_BITS = 4
         self.MESSAGE_BITS = self.POSITION_BITS + self.CELL_KIND_BITS
+
+    def get_score(self) -> int:
+        if self.cell_kind == CellKind.WALL:
+            return 1
+        if self.cell_kind == CellKind.UNSAFE:
+            return 1
+        if self.cell_kind == CellKind.ENEMY_WORKER:
+            return 3
+        if self.cell_kind == CellKind.ENEMY_SOLDIER:
+            return 6
+        if self.cell_kind == CellKind.ENEMY_BASE:
+            return 100
+        return 0
 
     def __str__(self) -> str:
         return f"{self.position} {self.cell_kind}"
@@ -94,15 +109,13 @@ class ChatObservationSimple():
     def __repr__(self) -> str:
         return self.__str__()
 
-    def get_score(self):
-        return 1
-
 
 class ChatObservationValue():
     def __init__(self, position=None, cell_kind=None, value=None) -> None:
         self.position: Position = position
         self.cell_kind: CellKind = cell_kind
         self.value: int = value
+        self.score = self.get_score()
 
         # CONSTS
         self.POSITION_BITS = 15
@@ -110,8 +123,12 @@ class ChatObservationValue():
         self.VALUE_BITS = 10
         self.MESSAGE_BITS = self.POSITION_BITS + self.CELL_KIND_BITS + self.VALUE_BITS
 
-    def get_score(self):
-        return 1
+    def get_score(self) -> int:
+        if self.cell_kind == CellKind.GRASS:
+            return 5
+        if self.cell_kind == CellKind.BREAD:
+            return 5
+        return 0
 
     def __str__(self) -> str:
         return f"{self.position} {self.cell_kind} {self.value}"
@@ -129,6 +146,7 @@ def to_bin_with_fixed_length(dec: int, goal_len: int):
 
 def encode(ant_id, messages: List[Chat]) -> str:
     "encode a message into multi-message format"
+    messages.sort(key=lambda x: x.score, reverse=True)
     s = ''
     bits_remaining = MESSAGE_LENGTH * CHAR_BITS
 
