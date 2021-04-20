@@ -297,17 +297,16 @@ class Env():
             destination = self.grid.where_to_watch(self.position)
             self.task = Task(TaskType.WATCH, destination)
 
-    def generate_message(self, direction):
+    def generate_message(self, direction, ant_id):
         messages = [(message, message.data.get_score()) for message in self.messages]
         messages.sort(key=lambda item: -item[1])
         messages = [x[0] for x in messages]
         
-        # TODO: set priority and ant_id
-        message = encode(133, messages)
-        priority = 2
+        # TODO: set ant_id
+        message, priority = encode(ant_id, messages)
         return message, priority
 
-    def run_one_turn(self):
+    def run_one_turn(self, ant_id):
         self.messages = []
         self.position = Position(self.game.ant.currentX, self.game.ant.currentY)
         self.update_grid()
@@ -320,5 +319,5 @@ class Env():
             direction = Direction.CENTER.value
         print(self.task)
         print(direction)
-        message, priority = self.generate_message(direction)
+        message, priority = self.generate_message(direction, ant_id)
         return message, priority,  direction.value
