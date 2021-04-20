@@ -1,8 +1,9 @@
-from random import randint, choice
+from random import randint, choice, shuffle
 from copy import deepcopy
 from collections import deque
 from typing import List
 import numpy as np
+
 
 from Model import Ant, Direction, Game, Map, Resource, ResourceType, CellType, AntType, AntTeam
 from x_consts import *
@@ -96,6 +97,7 @@ class Grid():
         while queue:
             current, path = queue.popleft()
             visited[current.y][current.x] = 1
+            neighbours = []
 
             for k in range(4):
                 x_ = dx[k] + current.x
@@ -104,8 +106,12 @@ class Grid():
                 if neighbor == goal:
                     return path + [current, neighbor]
                 if visited[neighbor.y][neighbor.x] == 0 and self[neighbor].wall == False:
-                    queue.append((neighbor, path + [current]))
+                    neighbours.append((neighbor, path + [current]))
                     visited[neighbor.y][neighbor.x] = 1
+
+            shuffle(neighbours)
+            for n in neighbours:
+                queue.append(n)
 
         return None
 
@@ -135,14 +141,14 @@ class Grid():
 
         return -1
 
-    def get_strategic_score(self, position: Position, cell: MapCell)-> int:
+    def get_strategic_score(self, position: Position, cell: MapCell) -> int:
         if cell.invalid:
             return -np.inf
         # if not cell.known:
         #     return -np.inf
 
         path = self.bfs_unknown(position, cell.position)
-        if not path: 
+        if not path:
             return -np.inf
         else:
             distance = len(path)
@@ -154,9 +160,9 @@ class Grid():
             unknown = int(not cell.known)
             # self_workers_in_cell = cell.get_self_workers_count()
 
-            return distance + distance_to_base + resource_score/ abs(resource_reliableness)
+            return distance + distance_to_base + resource_score / abs(resource_reliableness)
 
-    def get_strategic_points(self, position: Position) :
+    def get_strategic_points(self, position: Position):
         "returns list of (score, cells) decsending by score "
         cells = []
         for row in self.cells:
@@ -230,4 +236,3 @@ class Grid():
         # currently we just pick a random unseen but near to seens position
         locations = self.get_seen_cells_neighbours()
         return choice(locations) if len(locations) else start
-
