@@ -148,6 +148,7 @@ def encode(ant_id, messages: List[Chat]) -> str:
     "encode a message into multi-message format"
     messages.sort(key=lambda x: x.score, reverse=True)
     s = ''
+    total_score = 0
     bits_remaining = MESSAGE_LENGTH * CHAR_BITS
 
     # create ant id with ANT_ID_BITS bits
@@ -167,6 +168,7 @@ def encode(ant_id, messages: List[Chat]) -> str:
                 s += to_bin_with_fixed_length(msg.data.cell_kind.value,
                                               msg.data.CELL_KIND_BITS)
                 bits_remaining -= msg.data.MESSAGE_BITS + CHAT_KIND_BITS
+                total_score += msg.data.score
 
         # for OBSERVATION_VALUE
         if msg.type == ChatKind.OBSERVATION_VALUE:
@@ -180,6 +182,7 @@ def encode(ant_id, messages: List[Chat]) -> str:
                 s += to_bin_with_fixed_length(msg.data.value,
                                               msg.data.VALUE_BITS)
                 bits_remaining -= msg.data.MESSAGE_BITS + CHAT_KIND_BITS
+                total_score += msg.data.score
 
     final = ''
 
@@ -194,7 +197,7 @@ def encode(ant_id, messages: List[Chat]) -> str:
         char = int(char, 2)
         final += chr(char)
 
-    return final
+    return final, total_score
 
 
 def parser(bin):
