@@ -124,7 +124,6 @@ class Grid():
             return [start]
         visited = np.zeros((self.height, self.width))
         queue = deque([(start, [])])
-        number_of_unknown_cells = 0
 
         while queue:
             current, path = queue.popleft()
