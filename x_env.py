@@ -184,13 +184,14 @@ class Env():
                             )
                             self.messages.append(new_message)
                     # ANTS
-                    self.grid[cell_pos].set_ants(cell.ants) 
+                    self.grid.set_ants(cell.ants, cell_pos) 
                     # TODO: adding info of ants to messages
 
                     # ENEMY BASE
                     if cell.type == CellType.BASE.value:
                         if not cell_pos == self.base_pos:
                             self.grid[cell_pos].enemy_base = True
+                            self.grid.enemy_base = cell_pos
                             new_message = Chat(
                                 type=ChatKind.OBSERVATION_SIMPLE,
                                 data=ChatObservationSimple(
@@ -233,8 +234,12 @@ class Env():
                         reward += REWARD_ATTACK_TO_ENEMY_WORKER
 
     def update_grid(self):
+        self.grid.enemies_in_sight_prev = np.copy(self.grid.enemies_in_sight_curr)
+        self.grid.enemies_in_sight_curr = np.zeros((self.grid.height, self.grid.width))
         self.add_vision_to_map()
         self.handle_new_messages()
+        # TODO VVVV
+        self.add_attack_data_to_map()
         self.grid.update_last_seens()
 
     def update_task(self):
@@ -242,6 +247,7 @@ class Env():
         if self.game.ant.antType == AntType.KARGAR.value:
             if self.task:
                 if self.task.type == TaskType.RETURN:
+                    # TODO: if not full search and harvest more!
                     if self.position == self.base_pos:
                         self.task = None
                         return self.update_task()
@@ -249,21 +255,20 @@ class Env():
                         return
 
                 elif self.task.type == TaskType.HARVEST:
-                    # TODO: resource threshold
-                    if self.game.ant.currentResource and self.game.ant.currentResource.value > 0:
-                        self.task = Task(type=TaskType.RETURN,
-                                         destination=self.base_pos)
-                        return
-
-                    harvest_location = self.grid.get_harvest_location(
-                        self.position)
-                    if not harvest_location:  # Resource has been eaten by others
+                    if self.position == self.task.destination:
+                        if self.game.ant.currentResource and self.game.ant.currentResource.value > 0:
+                            self.task = Task(type=TaskType.RETURN,
+                                            destination=self.base_pos)
+                            return
+                        else:
+                            self.task = None
+                            self.update_task()
+                            return
+                    
+                    # Assume that the worker is insisting to do its task
+                    if not self.grid[self.task.destination].get_resource_score():  # Resource has been eaten by others
                         self.task = None
                         self.update_task()
-                        return
-                    elif harvest_location != self.task.destination:
-                        self.task = Task(type=TaskType.HARVEST,
-                                         destination=harvest_location)
                         return
                     else:
                         return
@@ -278,11 +283,13 @@ class Env():
                     if not self.grid.is_good_to_explore(self.task.destination):
                         self.task = None
                         self.update_task()
+                        return
                     if self.position == self.task.destination:
                         self.task = None
                         self.update_task()
+                        return
 
-            elif not self.task:
+            else:
                 harvest_location = self.grid.get_harvest_location(
                     self.position)
                 if harvest_location:
@@ -294,12 +301,56 @@ class Env():
                     self.task = Task(type=TaskType.EXPLORE,
                                      destination=destination)
                     return
+        
         elif self.game.ant.antType == AntType.SARBAAZ.value:
-            destination = self.grid.where_to_watch(self.position)
-            self.task = Task(TaskType.WATCH, destination)
+            if self.grid.can_we_attack():
+                self.task = Task(TaskType.BASE_ATTACK, 
+                    destination=self.grid.where_to_attack(
+                        position=self.position
+                    ))
+                return
+
+            if self.task:
+                if self.task.type == TaskType.BASE_ATTACK:
+                    if self.position == self.task.destination:
+                        return
+                elif self.task.type == TaskType.DEFEND:
+                    self.task.destination=self.grid.where_to_defend(
+                        position=self.position, current_destination=self.task.destination)
+                    return
+                # defend is different with watch and it does not follow the enemy
+                elif self.task.type == TaskType.WATCH:
+                    if self.grid.is_enemy_in_sight():
+                        destination = self.grid.get_one_enemy_position()
+                        self.task = Task(type=TaskType.KILL,
+                                destination=destination
+                            )
+                        return
+                    elif self.position == self.task.destination:
+                        self.task.destination=self.grid.where_to_watch(
+                            self.position, current_destination=None)
+                elif self.task.type == TaskType.KILL:
+                    if self.grid.is_enemy_killed():
+                        destination = self.grid.where_to_watch(self.position, current_destination=self.task.destination)
+                        self.task = Task(TaskType.WATCH, destination)
+                        return
+                    else:
+                        self.task.destination = self.grid.get_one_enemy_position()
+                        return
+            else:
+                if self.grid.get_defenders_count() < MIN_DEFENDERS:
+                    self.task = Task(TaskType.DEFEND,
+                        destination=self.grid.where_to_defend(
+                            position=self.position, current_destination=None
+                        ))
+                else:
+                    self.task = Task(TaskType.WATCH,
+                        destination=self.grid.where_to_watch(
+                            self.position, current_destination=None
+                        ))
 
     def generate_message(self, direction, ant_id):
-        print("sending from",ant_id, self.messages)
+        print("> sending from",ant_id, self.messages)
         message, priority = encode(ant_id, self.messages)
         return message, priority
 
@@ -307,7 +358,6 @@ class Env():
         self.messages = []
         self.position = Position(self.game.ant.currentX, self.game.ant.currentY)
         self.update_grid()
-        self.add_attack_data_to_map()
         self.update_task()
         direction = self.grid.get_direction(self.position, self.task.destination)
         if not direction:

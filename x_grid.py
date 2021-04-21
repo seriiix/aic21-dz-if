@@ -1,4 +1,4 @@
-from random import randint, choice, shuffle
+from random import randint, choice, shuffle, choices
 from copy import deepcopy
 from collections import deque
 from typing import List
@@ -45,37 +45,65 @@ class MapCell():
     def get_resource_score(self):
         return self.grass_value * GRASS_SCORE + self.bread_value * BREAD_SCORE
 
-    def set_ants(self, ants):
-        self.our_workers = 0
-        self.our_soldiers = 0
-        self.enemy_workers = 0
-        self.enemy_soldiers = 0
-        for ant in ants:
-            if ant.antTeam == AntTeam.ALLIED.value:
-                if ant.antType == AntType.KARGAR.value:
-                    self.our_workers += 1
-                elif ant.antType == AntType.SARBAAZ.value:
-                    self.our_soldiers += 1
-            elif ant.antTeam == AntTeam.ENEMY.value:
-                if ant.antType == AntType.KARGAR.value:
-                    self.enemy_workers += 1
-                elif ant.antType == AntType.SARBAAZ.value:
-                    self.enemy_soldiers += 1
-
 
 class Grid():
     def __init__(self, width, height, base_pos):
         self.width = width
         self.height = height
-        self.base_pos = base_pos
+        self.base_pos: Position = base_pos
+        self.unsafe_zone_seen: bool = False
+        self.enemy_base: Position = None
         self.cells = [[MapCell(i, j) for i in range(width)]
                       for j in range(height)]
+        self.enemies_in_sight_prev = np.zeros((height, width))
+        self.enemies_in_sight_curr = np.zeros((height, width))
 
     def __getitem__(self, position: Position):
         return self.cells[position.y][position.x]
 
     def __setitem__(self, position: Position, value: MapCell):
         self.cells[position.y][position.x] = deepcopy(value)
+
+    def get_defenders_count(self):
+        # TODO: باید یه جوری در بیاریم که الان چن نفر دارن دفاع میکنن از بیس
+        return MIN_DEFENDERS
+
+    def is_enemy_killed(self):
+        return int(np.sum(self.enemies_in_sight_curr - self.enemies_in_sight_prev)) == 0
+
+    def set_ants(self, ants, position):
+        self[position].our_workers = 0
+        self[position].our_soldiers = 0
+        self[position].enemy_workers = 0
+        self[position].enemy_soldiers = 0
+        for ant in ants:
+            if ant.antTeam == AntTeam.ALLIED.value:
+                if ant.antType == AntType.KARGAR.value:
+                    self[position].our_workers += 1
+                elif ant.antType == AntType.SARBAAZ.value:
+                    self[position].our_soldiers += 1
+            elif ant.antTeam == AntTeam.ENEMY.value:
+                if ant.antType == AntType.KARGAR.value:
+                    self[position].enemy_workers += 1
+                    self.enemies_in_sight_curr[position.y, position.x] += 1
+                elif ant.antType == AntType.SARBAAZ.value:
+                    self[position].enemy_soldiers += 1
+                    self.enemies_in_sight_curr[position.y, position.x] += 1
+    
+    def is_enemy_in_sight(self):
+        return int(np.sum(self.enemies_in_sight_curr)) > 0
+
+    def get_one_enemy_position(self):
+        if int(np.sum(self.enemies_in_sight_curr)) > 0:
+            ind = np.unravel_index(self.enemies_in_sight_curr.argmax(), self.enemies_in_sight_curr.shape)
+            return Position(ind[1], ind[0])
+        else:
+            ind = np.unravel_index(self.enemies_in_sight_prev.argmax(), self.enemies_in_sight_prev.shape)
+            return Position(ind[1], ind[0])
+
+    def can_we_attack(self):
+        # TODO : More analysis can be done here
+        return self.unsafe_zone_seen or self.enemy_base
 
     def fix_pos(self, pos: Position):
         if pos.x >= self.width:
@@ -152,7 +180,7 @@ class Grid():
             return -np.inf
         else:
             distance = len(path)
-            path_to_base = self.bfs_unknown(position, self.base_pos)
+            path_to_base = self.bfs_unknown(cell.position, self.base_pos)
             distance_to_base = len(path_to_base)
             resource_score = cell.get_resource_score()
             resource_reliableness = cell.last_seen
@@ -160,7 +188,8 @@ class Grid():
             unknown = int(not cell.known)
             # self_workers_in_cell = cell.get_self_workers_count()
 
-            return distance + distance_to_base + resource_score / abs(resource_reliableness)
+            # return distance_to_base + resource_score / abs(resource_reliableness/(distance_to_base/2))
+            return distance_to_base + resource_score
 
     def get_strategic_points(self, position: Position):
         "returns list of (score, cells) decsending by score "
@@ -171,7 +200,8 @@ class Grid():
         cells.sort(key=lambda item: -item[0])
         return cells
 
-    def where_to_watch(self, position: Position) -> Position:
+    def where_to_watch(self, position: Position, current_destination=None) -> Position:
+        # TODO: use destination
         # strategic_points = [(position: Position, priority: int)]
         strategic_points = self.get_strategic_points(position)
         # TODO: may be we can add some randomness here if needed
@@ -181,6 +211,13 @@ class Grid():
         else:
             return position
 
+    def where_to_defend(self, position: Position, current_destination=None):
+        # TODO اینجا حرکتی که میزنیم اینه که یه شعاع از بیس در نظر میگیریم و سربازامونو شانسی میچینیم دورش
+        # بعد هر سرباز میگه من الان اینجام و ما چک میکنیم اونجایی که الان داره دفاع میکنه خوبه یا نه
+        # اگه خوب نباشه یه جای بهتر میدیم بهش. چون ممکنه قبلا اون نقطه دیده نمیشده و بهش اساین شده
+        # نکته اینه که به مرور زمان میتونیم شعاع دفاع رو بیشتر کنیم.
+        return position
+
     def update_last_seens(self):
         for row in self.cells:
             for cell in row:
@@ -188,22 +225,24 @@ class Grid():
                 if cell.last_seen == 0:
                     cell.last_seen = -1
 
+    def get_harvest_score(self, start, location):
+        path = self.bfs_unknown(start, location)
+        distance = len(path) if path is not None else np.inf
+        resource_value = self[location].get_resource_score()
+        score = resource_value/distance
+        return score
+
     def get_harvest_location(self, position: Position) -> Position:
         # we assume the nearest location is the best
         # TODO: but may be there are better choices!
-        locations = [self[Position(x, y)].position for x in range(self.width) for y in range(self.height)
-                     if self[Position(x, y)].bread_value or self[Position(x, y)].grass_value]
-        min_distance = np.inf
-        min_location = None
-        for location in locations:
-            path = self.bfs_unknown(position, location)
-            distance = len(path) if path is not None else np.inf
-            # distance = location - position
-            if distance < min_distance:
-                min_distance = distance
-                min_location = location
-
-        return min_location
+        locations = [self[Position(x, y)].position
+                        for x in range(self.width) for y in range(self.height)
+                            if self[Position(x, y)].get_resource_score()]
+        weights = [self.get_harvest_score(position, location) for location in locations]
+        if len(locations):
+            return choices(locations, weights=weights, k=1)[0]
+        else:
+            return None
 
     def get_neighbour(self, position, direction):
         if direction == Direction.RIGHT:

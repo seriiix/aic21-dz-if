@@ -8,6 +8,10 @@ class TaskType(Enum):
     FLEE = 3
 
     WATCH = 4
+    BASE_ATTACK = 5
+    KILL = 6
+    DEFEND = 7
+    GATHER = 8
 
 
 class Task:
