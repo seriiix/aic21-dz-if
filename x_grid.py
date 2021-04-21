@@ -185,6 +185,8 @@ class Grid():
         for row in self.cells:
             for cell in row:
                 cell.last_seen -= 1
+                if cell.last_seen == 0:
+                    cell.last_seen = -1
 
     def get_harvest_location(self, position: Position) -> Position:
         # we assume the nearest location is the best

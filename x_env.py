@@ -86,6 +86,7 @@ class Env():
         # TODO : not all chats
         for chat in chats:
             ant_id, msgs = decode(chat.text)
+            print("recieve from",ant_id, msgs)
             for msg in msgs:
                 cell_pos = msg.data.position
                 self.grid[cell_pos].last_seen = -1
@@ -298,7 +299,8 @@ class Env():
             self.task = Task(TaskType.WATCH, destination)
 
     def generate_message(self, direction, ant_id):
-        message, priority = encode(ant_id, messages)
+        print("sending from",ant_id, self.messages)
+        message, priority = encode(ant_id, self.messages)
         return message, priority
 
     def run_one_turn(self, ant_id):
