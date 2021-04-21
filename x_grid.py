@@ -1,3 +1,4 @@
+from enum import IntFlag
 from random import randint, choice, shuffle, choices
 from copy import deepcopy
 from collections import deque
@@ -89,16 +90,18 @@ class Grid():
                 elif ant.antType == AntType.SARBAAZ.value:
                     self[position].enemy_soldiers += 1
                     self.enemies_in_sight_curr[position.y, position.x] += 1
-    
+
     def is_enemy_in_sight(self):
         return int(np.sum(self.enemies_in_sight_curr)) > 0
 
     def get_one_enemy_position(self):
         if int(np.sum(self.enemies_in_sight_curr)) > 0:
-            ind = np.unravel_index(self.enemies_in_sight_curr.argmax(), self.enemies_in_sight_curr.shape)
+            ind = np.unravel_index(
+                self.enemies_in_sight_curr.argmax(), self.enemies_in_sight_curr.shape)
             return Position(ind[1], ind[0])
         else:
-            ind = np.unravel_index(self.enemies_in_sight_prev.argmax(), self.enemies_in_sight_prev.shape)
+            ind = np.unravel_index(
+                self.enemies_in_sight_prev.argmax(), self.enemies_in_sight_prev.shape)
             return Position(ind[1], ind[0])
 
     def can_we_attack(self):
@@ -116,11 +119,12 @@ class Grid():
             pos.y = self.height - 1
         return pos
 
-    def bfs_unknown(self, start: Position, goal: Position):
+    def bfs(self, start: Position, goal: Position, known: bool = False):
         if start == goal:
             return [start]
         visited = np.zeros((self.height, self.width))
         queue = deque([(start, [])])
+        number_of_unknown_cells = 0
 
         while queue:
             current, path = queue.popleft()
@@ -134,6 +138,8 @@ class Grid():
                 if neighbor == goal:
                     return path + [current, neighbor]
                 if visited[neighbor.y][neighbor.x] == 0 and self[neighbor].wall == False:
+                    if known == True and self[neighbor].known == False:
+                        continue
                     neighbours.append((neighbor, path + [current]))
                     visited[neighbor.y][neighbor.x] = 1
 
@@ -143,12 +149,19 @@ class Grid():
 
         return None
 
+    def count_unknown_cells(self, path: List[Position]) -> int:
+        cntr = 0
+        for p in path:
+            if self[p].known:
+                cntr += 1
+        return cntr
+
     def get_direction(self, start: Position, goal: Position):
-        path = self.bfs_unknown(start, goal)
+        path = self.bfs(start, goal)
         if path is None:
             self[goal].invalid = True
             # TODO: here we should assign INVALID to the cell. Can we deduce more from this?
-            return None
+            return Direction.CENTER
         if start == goal:
             return Direction.CENTER
 
@@ -175,12 +188,12 @@ class Grid():
         # if not cell.known:
         #     return -np.inf
 
-        path = self.bfs_unknown(position, cell.position)
+        path = self.bfs(position, cell.position)
         if not path:
             return -np.inf
         else:
             distance = len(path)
-            path_to_base = self.bfs_unknown(cell.position, self.base_pos)
+            path_to_base = self.bfs(cell.position, self.base_pos)
             distance_to_base = len(path_to_base)
             resource_score = cell.get_resource_score()
             resource_reliableness = cell.last_seen
@@ -226,7 +239,7 @@ class Grid():
                     cell.last_seen = -1
 
     def get_harvest_score(self, start, location):
-        path = self.bfs_unknown(start, location)
+        path = self.bfs(start, location)
         distance = len(path) if path is not None else np.inf
         resource_value = self[location].get_resource_score()
         score = resource_value/distance
@@ -236,9 +249,10 @@ class Grid():
         # we assume the nearest location is the best
         # TODO: but may be there are better choices!
         locations = [self[Position(x, y)].position
-                        for x in range(self.width) for y in range(self.height)
-                            if self[Position(x, y)].get_resource_score()]
-        weights = [self.get_harvest_score(position, location) for location in locations]
+                     for x in range(self.width) for y in range(self.height)
+                     if self[Position(x, y)].get_resource_score()]
+        weights = [self.get_harvest_score(
+            position, location) for location in locations]
         if len(locations):
             return choices(locations, weights=weights, k=1)[0]
         else:
