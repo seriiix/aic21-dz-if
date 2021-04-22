@@ -16,7 +16,7 @@ class MapCell():
         self.position: Position = Position(x, y)
         self.known: bool = False  # seen at least one time
         self.invalid: bool = False  # برای جاهایی که اصلا غیر ممکنه مورچه بره اونجا ها
-        self.wall: bool = False  
+        self.wall: bool = False
         self.last_seen: int = -np.inf  # How many turns passed since we see the resource
 
         self.grass_value: int = 0
@@ -68,6 +68,23 @@ class Grid():
 
     def __setitem__(self, position: Position, value: MapCell):
         self.cells[position.y][position.x] = deepcopy(value)
+
+    def manhattan(self, p1: Position, p2: Position):
+        x1 = min(p1.x, p2.x)
+        x2 = max(p1.x, p2.x)
+        fx1 = abs(x1 - x2)
+        fx2 = abs(x1 + self.width - x2)
+        #
+        y1 = min(p1.y, p2.y)
+        y2 = max(p1.y, p2.y)
+        fy1 = abs(y1 - y2)
+        fy2 = abs(y1 + self.height - y2)
+
+        return min(fx1, fx2) + min(fy1, fy2)
+
+    def get_defenders_count(self):
+        # TODO: باید یه جوری در بیاریم که الان چن نفر دارن دفاع میکنن از بیس
+        return MIN_DEFENDERS
 
     def is_enemy_killed(self):
         "useful for soldiers when they chase enemy ants"
@@ -222,11 +239,13 @@ class Grid():
         اگه خوب نباشه یه جای بهتر میدیم بهش. چون ممکنه قبلا اون نقطه دیده نمیشده و بهش اساین شده
         نکته اینه که به مرور زمان میتونیم شعاع دفاع رو بیشتر کنیم."""
         # TODO: check if there are defenders there?
-        radius_cells = [cell.position for row in self.cells for cell in row 
-            if self.manhattan(cell.position, self.base_pos)==DEFEND_RADIUS and not cell.invalid
-        ]
-        radius_cell_paths = [self.bfs(self.base_pos, position, known=True) for position in radius_cells]
-        radius_cell_points = [len(path) if path else .001 for path in radius_cell_paths]
+        radius_cells = [cell.position for row in self.cells for cell in row
+                        if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS and not cell.invalid
+                        ]
+        radius_cell_paths = [
+            self.bfs(self.base_pos, position, known=True) for position in radius_cells]
+        radius_cell_points = [
+            len(path) if path else .001 for path in radius_cell_paths]
         return choices(radius_cells, weights=radius_cell_points, k=1)[0]
 
     def where_to_attack(self, position: Position, current_destination=None) -> Position:
