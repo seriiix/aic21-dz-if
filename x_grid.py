@@ -113,6 +113,7 @@ class Grid():
         return int(np.sum(self.enemies_in_sight_curr)) > 0
 
     def get_one_enemy_position(self):
+        # TODO: بهتره اونی که دورتر از بیس خودمونه رو بگیریم
         if int(np.sum(self.enemies_in_sight_curr)) > 0:
             ind = np.unravel_index(
                 self.enemies_in_sight_curr.argmax(), self.enemies_in_sight_curr.shape)

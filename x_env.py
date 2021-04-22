@@ -67,6 +67,11 @@ class Env():
                     elif msg.data.cell_kind == CellKind.GRASS.value:
                         self.grid[cell_pos].bread_value = 0
                         self.grid[cell_pos].grass_value = msg.data.value
+                    elif msg.data.cell_kind == CellKind.WANT_TO_DEFEND.value:
+                        self.grid[cell_pos].want_to_defenders += 1
+                        self.defenders += 1
+                    elif msg.data.cell_kind == CellKind.WANT_TO_EXPLORE.value:
+                        self.explorers += 1
                     # elif msg.data.cell_kind == CellKind.ENEMY_SOLDIER.value:
                     #     self.grid[cell_pos].enemy_soldiers = msg.data.value
                     # elif msg.data.cell_kind == CellKind.ENEMY_WORKER.value:
@@ -136,6 +141,8 @@ class Env():
                     elif msg.data.cell_kind == CellKind.WANT_TO_DEFEND.value:
                         self.grid[cell_pos].want_to_defenders += 1
                         self.defenders += 1
+                    elif msg.data.cell_kind == CellKind.WANT_TO_EXPLORE.value:
+                        self.explorers += 1
                     elif msg.data.cell_kind == CellKind.SOLDIER_BORN:
                         self.soldiers += 1
                     elif msg.data.cell_kind == CellKind.WORKER_BORN:
@@ -401,16 +408,18 @@ class Env():
                     #     position=self.position, current_destination=self.task.destination)
                     return
                 # defend is different with watch and it does not follow the enemy
-                elif self.task.type == TaskType.WATCH:
-                    if self.grid.is_enemy_in_sight():
-                        destination = self.grid.get_one_enemy_position()
-                        self.task = Task(type=TaskType.KILL,
-                                destination=destination
-                            )
-                        return
-                    elif self.position == self.task.destination:
-                        self.task.destination=self.grid.where_to_watch(
-                            self.position, current_destination=None)
+
+                # elif self.task.type == TaskType.WATCH:
+                #     if self.grid.is_enemy_in_sight():
+                #         destination = self.grid.get_one_enemy_position()
+                #         self.task = Task(type=TaskType.KILL,
+                #                 destination=destination
+                #             )
+                #         return
+                #     elif self.position == self.task.destination:
+                #         self.task.destination=self.grid.where_to_watch(
+                #             self.position, current_destination=None)
+
                 elif self.task.type == TaskType.EXPLORE:
                     if self.grid.is_enemy_in_sight():
                         destination = self.grid.get_one_enemy_position()
@@ -431,13 +440,16 @@ class Env():
                             self.task = Task(TaskType.EXPLORE, destination)
                             return
                         else:
-                            destination = self.grid.where_to_watch(self.position, current_destination=self.task.destination)
-                            self.task = Task(TaskType.WATCH, destination)
+                            # destination = self.grid.where_to_watch(self.position, current_destination=self.task.destination)
+                            # self.task = Task(TaskType.WATCH, destination)
+                            destination = self.grid.get_explore_location(self.position)
+                            self.task = Task(TaskType.EXPLORE, destination)
                             return
                     else:
                         self.task.destination = self.grid.get_one_enemy_position()
                         return
             else:
+                # TODO: we can add equilibrium here -> one by one
                 if self.defenders < MIN_DEFENDERS:
                     self.task = Task(TaskType.DEFEND,
                         destination=self.grid.where_to_defend(
@@ -449,7 +461,8 @@ class Env():
                             self.task.destination, CellKind.WANT_TO_DEFEND)
                         )
                     self.messages.append(new_message)
-                elif self.explorers < MIN_EXPLORERS:
+                # else self.explorers < MIN_EXPLORERS:
+                else:
                     self.is_explorer = True
                     self.task = Task(TaskType.EXPLORE,
                         destination=self.grid.get_explore_location(
@@ -461,11 +474,11 @@ class Env():
                             self.task.destination, CellKind.WANT_TO_EXPLORE)
                         )
                     self.messages.append(new_message)
-                else:
-                    self.task = Task(TaskType.WATCH,
-                        destination=self.grid.where_to_watch(
-                            self.position, current_destination=None
-                        ))
+                # else:
+                #     self.task = Task(TaskType.WATCH,
+                #         destination=self.grid.where_to_watch(
+                #             self.position, current_destination=None
+                #         ))
 
     def generate_message(self, direction, ant_id):
         # print("> sending from",ant_id, self.messages)
