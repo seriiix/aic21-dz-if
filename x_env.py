@@ -466,7 +466,7 @@ class Env():
                     self.is_explorer = True
                     self.task = Task(TaskType.EXPLORE,
                         destination=self.grid.get_explore_location(
-                            position=self.position
+                            self.position
                         ))
                     new_message = Chat(
                             type=ChatKind.OBSERVATION_SIMPLE,

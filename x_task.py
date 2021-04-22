@@ -15,6 +15,7 @@ class TaskType(Enum):
 
 
 class Task:
+    # TODO: tasks can expire -> especially explore
     def __init__(self, type: TaskType, destination: Position):
         self.type: TaskType = type
         self.destination: Position = destination
