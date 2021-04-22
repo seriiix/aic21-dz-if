@@ -217,14 +217,15 @@ class Grid():
             return position
 
     def where_to_defend(self, position: Position, current_destination=None):
-        # TODO اینجا حرکتی که میزنیم اینه که یه شعاع از بیس در نظر میگیریم و سربازامونو شانسی میچینیم دورش
-        # بعد هر سرباز میگه من الان اینجام و ما چک میکنیم اونجایی که الان داره دفاع میکنه خوبه یا نه
-        # اگه خوب نباشه یه جای بهتر میدیم بهش. چون ممکنه قبلا اون نقطه دیده نمیشده و بهش اساین شده
-        # نکته اینه که به مرور زمان میتونیم شعاع دفاع رو بیشتر کنیم.
+        """ اینجا حرکتی که میزنیم اینه که یه شعاع از بیس در نظر میگیریم و سربازامونو شانسی میچینیم دورش
+        بعد هر سرباز میگه من الان اینجام و ما چک میکنیم اونجایی که الان داره دفاع میکنه خوبه یا نه
+        اگه خوب نباشه یه جای بهتر میدیم بهش. چون ممکنه قبلا اون نقطه دیده نمیشده و بهش اساین شده
+        نکته اینه که به مرور زمان میتونیم شعاع دفاع رو بیشتر کنیم."""
+        # TODO: check if there are defenders there?
         radius_cells = [cell.position for row in self.cells for cell in row 
             if self.manhattan(cell.position, self.base_pos)==DEFEND_RADIUS and not cell.invalid
         ]
-        radius_cell_paths = [self.bfs(self.base_pos, position, known=True) for position in radius_cell_points ]
+        radius_cell_paths = [self.bfs(self.base_pos, position, known=True) for position in radius_cells]
         radius_cell_points = [len(path) if path else .001 for path in radius_cell_paths]
         return choices(radius_cells, weights=radius_cell_points, k=1)[0]
 
