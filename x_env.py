@@ -255,7 +255,7 @@ class Env():
             # Getting damaged
             if attack.is_attacker_enemy:
                 if not self.grid.enemy_base:
-                    if self.grid.manhattan(defender_pos, attacker_pos) > 4 or not self.grid[attacker_pos].enemy_soldiers:
+                    if defender_pos==self.position and (self.grid.manhattan(defender_pos, attacker_pos) > 4 or not self.grid[attacker_pos].enemy_soldiers):
                         # ENEMY BASE IS FOUND!
                         self.grid[defender_pos].safe = False
                         self.grid[attacker_pos].enemy_base = True
@@ -385,17 +385,22 @@ class Env():
                 destination = self.grid.get_explore_location(self.position)
                 self.task = Task(type=TaskType.EXPLORE,
                                     destination=destination)
-                new_message = Chat(
-                        type=ChatKind.OBSERVATION_SIMPLE,
-                        data=ChatObservationSimple(
-                        self.task.destination, CellKind.WANT_TO_EXPLORE)
-                    )
-                self.messages.append(new_message)
+                # new_message = Chat(
+                #         type=ChatKind.OBSERVATION_SIMPLE,
+                #         data=ChatObservationSimple(
+                #         self.task.destination, CellKind.WANT_TO_EXPLORE)
+                #     )
+                # self.messages.append(new_message)
                 return
     
     def update_soldier_task(self):
+        # print("OUR SOLDIERS=", self.grid[self.position].our_soldiers)
         if self.attacking_position:
             self.task = Task(TaskType.BASE_ATTACK, destination=self.attacking_position)
+
+        elif self.get_last_turn_number() > 72:
+            self.task = Task(TaskType.EXPLORE, destination=self.grid.get_explore_location(self.position))
+
         elif self.gathering_position:
             self.task = Task(TaskType.GATHER, destination=self.gathering_position)
 
@@ -421,6 +426,7 @@ class Env():
             if   self.task.type == TaskType.BASE_ATTACK:
                 return
             elif self.task.type == TaskType.GATHER:
+                # TODO: or waiting until certain time
                 if self.grid[self.position].our_soldiers >= MIN_GATHER_ANTS:
                     self.attacking_position = self.grid.where_to_attack(self.position)
                     self.task = Task(TaskType.BASE_ATTACK, destination=self.attacking_position)
@@ -438,7 +444,7 @@ class Env():
                     self.task = Task(TaskType.KILL, destination=self.grid.get_one_enemy_position())
                     return
                 else:
-                    if self.get_last_turn_number() % 3 == 0:
+                    if self.get_last_turn_number() % 2 == 0:
                         self.task.destination = self.grid.where_to_defend(self.position)
             elif self.task.type == TaskType.KILL:
                 if self.grid.is_enemy_in_sight():
@@ -484,6 +490,6 @@ class Env():
         self.update_task()
         direction = self.get_direction()
 
-        print(direction, self.task)
+        # print(direction, self.task)
         message, priority = self.generate_message(direction, ant_id)
         return message, priority,  direction.value

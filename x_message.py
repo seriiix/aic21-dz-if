@@ -95,7 +95,6 @@ class CellKind(Enum):
         if kind == 14:
             return CellKind.LETS_FUCK_THIS_SHIT
 
-
         return None
 
 
@@ -133,17 +132,17 @@ class ChatObservationSimple():
         if self.cell_kind == CellKind.ENEMY_SOLDIER:
             return 6
         if self.cell_kind == CellKind.HELP_ME:
-            return 75
+            return 175
         if self.cell_kind == CellKind.WANT_TO_DEFEND:
-            return 80
+            return 180
         if self.cell_kind == CellKind.WANT_TO_EXPLORE:
-            return 85
+            return 185
         if self.cell_kind == CellKind.WANT_TO_GATHER:
-            return 90
+            return 190
         if self.cell_kind == CellKind.LETS_FUCK_THIS_SHIT:
-            return 95
+            return 196
         if self.cell_kind == CellKind.ENEMY_BASE:
-            return 100
+            return 210
         return 0
 
     def __str__(self) -> str:

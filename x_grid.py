@@ -33,8 +33,8 @@ class MapCell():
         self.enemy_soldiers = 0
 
         # TODO:
-        # self.want_to_defenders = 0
-        # self.want_to_harvesters = 0
+        self.want_to_defenders = 0
+        self.want_to_harvesters = 0
 
     def __eq__(self, other) -> bool:
         if type(other) == MapCell:
