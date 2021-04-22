@@ -363,6 +363,12 @@ class Env():
                     if self.position == self.task.destination:
                         return
                 elif self.task.type == TaskType.DEFEND:
+                    if self.grid.is_enemy_in_sight():
+                        destination = self.grid.get_one_enemy_position()
+                        self.task = Task(type=TaskType.KILL,
+                                destination=destination
+                            )
+                        return
                     # self.task.destination=self.grid.where_to_defend(
                     #     position=self.position, current_destination=self.task.destination)
                     return
