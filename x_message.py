@@ -34,6 +34,7 @@ for i in range(35):
 class ChatKind(Enum):
     OBSERVATION_SIMPLE = '000'  # [position + kind]
     OBSERVATION_VALUE = '001'  # [position + kind + value]
+    SINGLE_CELL_KIND = '010'  # [kind]
 
     END = '111'
 
@@ -43,13 +44,15 @@ class CellKind(Enum):
     GRASS = 1
     BREAD = 2
     UNSAFE = 3
-    
+    # if need more set CELL_KIND_BITS(s) to 3
+
     ENEMY_BASE = 4
     ENEMY_WORKER = 5
     ENEMY_SOLDIER = 6
 
     WANT_TO_DEFEND = 7
     WANT_TO_HARVEST = 8
+    # if need more set CELL_KIND_BITS(s) to 4
     WANT_TO_WATCH = 9
     WANT_TO_EXPLORE = 10
 
@@ -61,6 +64,7 @@ class CellKind(Enum):
     WORKER_BORN = 14
     WORKER_DIED = 15
 
+    # if need more set CELL_KIND_BITS(s) to 5
 
     @staticmethod
     def get_value(kind: int):
@@ -157,6 +161,27 @@ class ChatObservationValue():
         return self.__str__()
 
 
+class ChatSingleCellKind():
+    def __init__(self, cell_kind=None) -> None:
+        self.cell_kind = cell_kind
+        self.score = self.get_score()
+
+        # CONSTS
+        self.CELL_KIND_BITS = 4
+        self.MESSAGE_BITS = self.CELL_KIND_BITS
+
+    def get_score(self) -> int:
+        if self.cell_kind == CellKind.SOLDIER_BORN:
+            return 3
+        return 0
+
+    def __str__(self) -> str:
+        return f"{self.cell_kind}"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
 def to_bin_with_fixed_length(dec: int, goal_len: int):
     "converts dec to bin and make it goal_len"
     bin = f"{dec:b}"
@@ -201,6 +226,15 @@ def encode(ant_id, messages: List[Chat]) -> str:
                                               msg.data.CELL_KIND_BITS)
                 s += to_bin_with_fixed_length(msg.data.value,
                                               msg.data.VALUE_BITS)
+                bits_remaining -= msg.data.MESSAGE_BITS + CHAT_KIND_BITS
+                total_score += msg.data.score
+
+        # for SINGLE_CELL_KIND
+        if msg.type == ChatKind.SINGLE_CELL_KIND:
+            if bits_remaining >= msg.data.MESSAGE_BITS + CHAT_KIND_BITS:
+                s += ChatKind.SINGLE_CELL_KIND.value
+                s += to_bin_with_fixed_length(msg.data.cell_kind.value,
+                                              msg.data.CELL_KIND_BITS)
                 bits_remaining -= msg.data.MESSAGE_BITS + CHAT_KIND_BITS
                 total_score += msg.data.score
 
@@ -264,6 +298,17 @@ def parser(bin):
             msgs.append(
                 Chat(type=ChatKind.OBSERVATION_VALUE, data=deepcopy(chat)))
 
+        # SINGLE_CELL_KIND
+        if chat_kind == ChatKind.SINGLE_CELL_KIND.value:
+            chat = ChatSingleCellKind()
+            if len(bin) < chat.MESSAGE_BITS:
+                break
+            kind = ord(chr(int(bin[:chat.CELL_KIND_BITS], 2)))
+            chat.cell_kind = CellKind(kind)
+            bin = bin[chat.CELL_KIND_BITS:]
+            msgs.append(
+                Chat(type=ChatKind.SINGLE_CELL_KIND, data=deepcopy(chat)))
+
     return ant_id, msgs
 
 
@@ -285,8 +330,11 @@ if __name__ == '__main__':
                   data=ChatObservationValue(
                       Position(3, 4), CellKind.GRASS, 55))
 
-    e = encode(
-        1337, [f_msg1, f_msg2, f_msg2, f_msg1])
-    print('length of encoded msg:', len(e))
-    ant_id, msgs = decode(e)
+    f_msg3 = Chat(type=ChatKind.SINGLE_CELL_KIND,
+                  data=ChatSingleCellKind(CellKind.SOLDIER_BORN))
+
+    m, sc = encode(
+        1337, [f_msg1, f_msg2, f_msg3, f_msg1, f_msg2])
+    print('length of encoded msg:', len(m))
+    ant_id, msgs = decode(m)
     print('decoded msg:', ant_id, msgs)
