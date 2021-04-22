@@ -308,6 +308,11 @@ class Grid():
                             locations.append(position)
         return locations
 
+    def get_gathering_position(self, position):
+        # TODO: better option you shoud get optimal value by knowing soldier distances
+        path = self.bfs(self.base_pos, position, known=True)
+        return path[len(path)//2]
+
     def get_explore_location(self, start: Position) -> Position:
         locations = self.get_seen_cells_neighbours()
         weights = [1/self.manhattan(start, location) for location in locations]

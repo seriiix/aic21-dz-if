@@ -53,15 +53,15 @@ class CellKind(Enum):
     WANT_TO_DEFEND = 7
     WANT_TO_HARVEST = 8
     # if need more set CELL_KIND_BITS(s) to 4
-    WANT_TO_WATCH = 9
+    WANT_TO_GATHER = 9
     WANT_TO_EXPLORE = 10
 
     # NO POSITION NEEDED
     # ONLY IF DAMAGED
     SOLDIER_BORN = 11
     EXPLORER_DIED = 12
-    DEFENDER_DIED = 13
-    WORKER_BORN = 14
+    HELP_ME = 13
+    LETS_FUCK_THIS_SHIT = 14
     WORKER_DIED = 15
 
     # if need more set CELL_KIND_BITS(s) to 5
@@ -86,8 +86,15 @@ class CellKind(Enum):
             return CellKind.WANT_TO_DEFEND
         if kind == 8:
             return CellKind.WANT_TO_HARVEST
+        if kind == 9:
+            return CellKind.WANT_TO_GATHER
         if kind == 10:
             return CellKind.WANT_TO_EXPLORE
+        if kind == 13:
+            return CellKind.HELP_ME
+        if kind == 14:
+            return CellKind.LETS_FUCK_THIS_SHIT
+
 
         return None
 
@@ -125,10 +132,16 @@ class ChatObservationSimple():
             return 3
         if self.cell_kind == CellKind.ENEMY_SOLDIER:
             return 6
+        if self.cell_kind == CellKind.HELP_ME:
+            return 75
         if self.cell_kind == CellKind.WANT_TO_DEFEND:
-            return 50
+            return 80
         if self.cell_kind == CellKind.WANT_TO_EXPLORE:
-            return 40
+            return 85
+        if self.cell_kind == CellKind.WANT_TO_GATHER:
+            return 90
+        if self.cell_kind == CellKind.LETS_FUCK_THIS_SHIT:
+            return 95
         if self.cell_kind == CellKind.ENEMY_BASE:
             return 100
         return 0
@@ -344,3 +357,5 @@ if __name__ == '__main__':
     print('length of encoded msg:', len(m))
     ant_id, msgs = decode(m)
     print('decoded msg:', ant_id, msgs)
+    print("x", msgs[0].data.cell_kind==CellKind.GRASS)
+    print("x",msgs[0].type)
