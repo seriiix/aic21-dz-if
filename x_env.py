@@ -435,16 +435,16 @@ class Env():
                             self.position)
                 elif self.task.type == TaskType.KILL:
                     if self.grid.is_enemy_killed():
-                        if self.is_explorer:
-                            destination = self.grid.get_explore_location(self.position)
-                            self.task = Task(TaskType.EXPLORE, destination)
-                            return
-                        else:
-                            # destination = self.grid.where_to_watch(self.position, current_destination=self.task.destination)
-                            # self.task = Task(TaskType.WATCH, destination)
-                            destination = self.grid.get_explore_location(self.position)
-                            self.task = Task(TaskType.EXPLORE, destination)
-                            return
+                        # if self.is_explorer:
+                        destination = self.grid.get_explore_location(self.position)
+                        self.task = Task(TaskType.EXPLORE, destination)
+                        return
+                        # else:
+                        #     # destination = self.grid.where_to_watch(self.position, current_destination=self.task.destination)
+                        #     # self.task = Task(TaskType.WATCH, destination)
+                        #     destination = self.grid.get_explore_location(self.position)
+                        #     self.task = Task(TaskType.EXPLORE, destination)
+                        #     return
                     else:
                         self.task.destination = self.grid.get_one_enemy_position()
                         return
