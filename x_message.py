@@ -43,9 +43,24 @@ class CellKind(Enum):
     GRASS = 1
     BREAD = 2
     UNSAFE = 3
+    
     ENEMY_BASE = 4
     ENEMY_WORKER = 5
     ENEMY_SOLDIER = 6
+
+    WANT_TO_DEFEND = 7
+    WANT_TO_HARVEST = 8
+    WANT_TO_WATCH = 9
+    WANT_TO_EXPLORE = 10
+
+    # NO POSITION NEEDED
+    # ONLY IF DAMAGED
+    SOLDIER_BORN = 11
+    EXPLORER_DIED = 12
+    DEFENDER_DIED = 13
+    WORKER_BORN = 14
+    WORKER_DIED = 15
+
 
     @staticmethod
     def get_value(kind: int):
@@ -63,6 +78,11 @@ class CellKind(Enum):
             return CellKind.ENEMY_WORKER
         if kind == 6:
             return CellKind.ENEMY_SOLDIER
+        if kind == 7:
+            return CellKind.WANT_TO_DEFEND
+        if kind == 8:
+            return CellKind.WANT_TO_HARVEST
+
         return None
 
 

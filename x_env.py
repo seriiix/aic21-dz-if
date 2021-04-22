@@ -21,6 +21,10 @@ class Env():
         self.position: Position = None
         self.ant: Ant = None
         self.messages = []
+        self.defenders = 0
+        self.explorers = 0
+        self.soldiers = 0
+        self.workers = 0
 
     def init_grid(self, game):
         self.game = game
@@ -104,6 +108,11 @@ class Env():
                     elif msg.data.cell_kind == CellKind.ENEMY_BASE.value:
                         self.grid[cell_pos].safe = False
                         self.grid[cell_pos].enemy_base = True
+                        self.messages.append(Chat(
+                            type=ChatKind.OBSERVATION_SIMPLE,
+                            data=ChatObservationSimple(
+                            cell_pos, CellKind.ENEMY_BASE)
+                        ))
                         # TODO: May be we should do something urgent!
                 
                 elif msg.type == ChatKind.OBSERVATION_VALUE:
@@ -118,6 +127,13 @@ class Env():
                         self.grid[cell_pos].enemy_soldiers = msg.data.value
                     elif msg.data.cell_kind == CellKind.ENEMY_WORKER.value:
                         self.grid[cell_pos].enemy_workers = msg.data.value
+                    elif msg.data.cell_kind == CellKind.WANT_TO_DEFEND.value:
+                        self.grid[cell_pos].want_to_defenders += 1
+                        self.defenders += 1
+                    elif msg.data.cell_kind == CellKind.SOLDIER_BORN:
+                        self.soldiers += 1
+                    elif msg.data.cell_kind == CellKind.WORKER_BORN:
+                        self.workers += 1
 
     def add_vision_to_map(self) -> None:
         "the ant adds its vision information to the grid"
@@ -202,36 +218,44 @@ class Env():
                     else:
                         self.grid[cell_pos].enemy_base = False
 
+    def is_attak_from_enemy_base(self):
+        pass
+        # TODO:distance from enemy > 4 || position of attacker has no enemy soldier whitin
+
     def add_attack_data_to_map(self):
-        # TODO: is it needed? 
-        return 
         ant = self.game.ant
         attacks = ant.attacks
-        # Moving resources to our base
         
         for attack in attacks:
             # Getting damaged
+            attacker_pos = Position(x=attack.attacker_col, y=attack.attacker_row)
+            defender_pos = Position(x=attack.defender_col, y=attack.defender_row)
             if attack.is_attacker_enemy:
-                if attack.defender_row == curr_game.baseX and attack.defender_col == curr_game.baseY:
-                    # TODO: to be checked --> does it need to calculate based on base's health??
-                    reward += REWARD_GOT_DAMAGED_BASE
-                elif attack.defender_row == ant.currentX and attack.defender_col == ant.currentY and prev_game.ant.health != ant.health:
-                    damage = prev_game.ant.health-ant.health  # damage > 0
-                    # damage = 1 # TODO: is this needed or not?
-                    if ant.antType == AntType.SARBAAZ.value:
-                        reward += damage * REWARD_GOT_DAMAGED_SOLDIER
-                    elif ant.antType == AntType.KARGAR.value:
-                        reward += damage * REWARD_GOT_DAMAGED_WORKER
-
-            else:
-                # Attacking from us
-                if attack.attacker_row == ant.currentX and attack.attacker_col == ant.currentY and ant.antType == AntType.SARBAAZ.value:
-                    if self.states(0, 0, attack.defender_row, attack.defender_col) == STATE_ENEMY_BASE:
-                        reward += REWARD_ATTACK_TO_ENEMY_BASE
-                    elif self.states(0, 0, attack.defender_row, attack.defender_col) == STATE_ENEMY_SOLDIER:
-                        reward += REWARD_ATTACK_TO_ENEMY_SOLDIER
-                    elif self.states(0, 0, attack.defender_row, attack.defender_col) == STATE_ENEMY_WORKER:
-                        reward += REWARD_ATTACK_TO_ENEMY_WORKER
+                # if defender_pos == self.base_pos:
+                #     # TODO: to be checked --> does it need to calculate based on base's health??
+                #     reward += REWARD_GOT_DAMAGED_BASE
+                # elif defender_pos == self.position:
+                if self.grid.manhattan(defender_pos, attacker_pos) > 4 or not self.grid[attacker_pos].enemy_soldiers:
+                    # ENEMY BASE IS FOUND!
+                    self.grid[defender_pos].safe = False
+                    self.grid[attacker_pos].enemy_base = True
+                    self.grid.enemy_base = attacker_pos
+                    self.grid.unsafe_zone_seen = True
+                    self.messages.append(Chat(
+                        type=ChatKind.OBSERVATION_SIMPLE,
+                        data=ChatObservationSimple(
+                        attacker_pos, CellKind.ENEMY_BASE)
+                    ))
+                    
+            # else:
+            #     # Attacking from us
+            #     if attack.attacker_row == ant.currentX and attack.attacker_col == ant.currentY and ant.antType == AntType.SARBAAZ.value:
+            #         if self.states(0, 0, attack.defender_row, attack.defender_col) == STATE_ENEMY_BASE:
+            #             reward += REWARD_ATTACK_TO_ENEMY_BASE
+            #         elif self.states(0, 0, attack.defender_row, attack.defender_col) == STATE_ENEMY_SOLDIER:
+            #             reward += REWARD_ATTACK_TO_ENEMY_SOLDIER
+            #         elif self.states(0, 0, attack.defender_row, attack.defender_col) == STATE_ENEMY_WORKER:
+            #             reward += REWARD_ATTACK_TO_ENEMY_WORKER
 
     def update_grid(self):
         self.grid.enemies_in_sight_prev = np.copy(self.grid.enemies_in_sight_curr)
@@ -247,7 +271,6 @@ class Env():
         if self.game.ant.antType == AntType.KARGAR.value:
             if self.task:
                 if self.task.type == TaskType.RETURN:
-                    # TODO: if not full search and harvest more!
                     if self.position == self.base_pos:
                         self.task = None
                         return self.update_task()
@@ -256,6 +279,7 @@ class Env():
 
                 elif self.task.type == TaskType.HARVEST:
                     if self.position == self.task.destination:
+                        # TODO: if not full search and harvest more!
                         if self.game.ant.currentResource and self.game.ant.currentResource.value > 0:
                             self.task = Task(type=TaskType.RETURN,
                                             destination=self.base_pos)
@@ -274,11 +298,18 @@ class Env():
                         return
 
                 elif self.task.type == TaskType.EXPLORE:
+                    # به مورچه کارگر اگه منبع برا جمع کردن هست اکسپلور نمیدیم!
                     harvest_location = self.grid.get_harvest_location(
                         self.position)
                     if harvest_location:
                         self.task = Task(type=TaskType.HARVEST,
                                          destination=harvest_location)
+                        new_message = Chat(
+                            type=ChatKind.OBSERVATION_SIMPLE,
+                            data=ChatObservationSimple(
+                            self.task.destination, CellKind.WANT_TO_HARVEST)
+                        )
+                        self.messages.append(new_message)
                         return
                     if not self.grid.is_good_to_explore(self.task.destination):
                         self.task = None
@@ -295,11 +326,23 @@ class Env():
                 if harvest_location:
                     self.task = Task(type=TaskType.HARVEST,
                                      destination=harvest_location)
+                    new_message = Chat(
+                            type=ChatKind.OBSERVATION_SIMPLE,
+                            data=ChatObservationSimple(
+                            self.task.destination, CellKind.WANT_TO_HARVEST)
+                        )
+                    self.messages.append(new_message)
                     return
                 else:
                     destination = self.grid.get_explore_location(self.position)
                     self.task = Task(type=TaskType.EXPLORE,
                                      destination=destination)
+                    new_message = Chat(
+                            type=ChatKind.OBSERVATION_SIMPLE,
+                            data=ChatObservationSimple(
+                            self.task.destination, CellKind.WANT_TO_EXPLORE)
+                        )
+                    self.messages.append(new_message)
                     return
         
         elif self.game.ant.antType == AntType.SARBAAZ.value:
@@ -338,11 +381,17 @@ class Env():
                         self.task.destination = self.grid.get_one_enemy_position()
                         return
             else:
-                if self.grid.get_defenders_count() < MIN_DEFENDERS:
+                if self.defenders < MIN_DEFENDERS:
                     self.task = Task(TaskType.DEFEND,
                         destination=self.grid.where_to_defend(
                             position=self.position, current_destination=None
                         ))
+                    new_message = Chat(
+                            type=ChatKind.OBSERVATION_SIMPLE,
+                            data=ChatObservationSimple(
+                            self.task.destination, CellKind.WANT_TO_DEFEND)
+                        )
+                    self.messages.append(new_message)
                 else:
                     self.task = Task(TaskType.WATCH,
                         destination=self.grid.where_to_watch(
@@ -354,17 +403,24 @@ class Env():
         message, priority = encode(ant_id, self.messages)
         return message, priority
 
+    def get_direction(self):
+        direction = self.grid.get_direction(self.position, self.task.destination)
+        if direction is None:
+            self.task = None
+            self.update_task()
+            direction = self.grid.get_direction(self.position, self.task.destination)
+            if direction is None:
+                self.task = None
+                direction = Direction.CENTER
+        return direction
+
     def run_one_turn(self, ant_id):
         self.messages = []
         self.position = Position(self.game.ant.currentX, self.game.ant.currentY)
         self.update_grid()
         self.update_task()
-        direction = self.grid.get_direction(self.position, self.task.destination)
-        if not direction:
-            # TODO: here waits for 1 turn. can we do better?
-            self.task = None
-            direction = Direction.CENTER.value
-        print(self.task)
-        print(direction)
+        direction = self.get_direction()
+
+        print(direction, self.task)
         message, priority = self.generate_message(direction, ant_id)
         return message, priority,  direction.value

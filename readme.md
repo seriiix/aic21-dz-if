@@ -41,3 +41,5 @@ check that there are two chat classes and some conflicts may happen!
 #  map_wall_perc	20%	درصدی از مپ که دیوارها هستند
 
 # min_base_dist	10	حداقل فاصله‌ی دو پایگاه
+
+# برای مسیج میشه یه صف درست کرد.

@@ -16,7 +16,7 @@ class MapCell():
         self.position: Position = Position(x, y)
         self.known: bool = False  # seen at least one time
         self.invalid: bool = False  # برای جاهایی که اصلا غیر ممکنه مورچه بره اونجا ها
-        self.wall: bool = False  # TODO: wall needs to be None at first because we dont know!
+        self.wall: bool = False  
         self.last_seen: int = -np.inf  # How many turns passed since we see the resource
 
         self.grass_value: int = 0
@@ -31,6 +31,10 @@ class MapCell():
         self.our_soldiers = 0
         self.enemy_workers = 0
         self.enemy_soldiers = 0
+
+        # TODO:
+        # self.want_to_defenders = 0
+        # self.want_to_harvesters = 0
 
     def __eq__(self, other) -> bool:
         if type(other) == MapCell:
@@ -159,8 +163,7 @@ class Grid():
         path = self.bfs(start, goal)
         if path is None:
             self[goal].invalid = True
-            # TODO: here we should assign INVALID to the cell. Can we deduce more from this?
-            return Direction.CENTER
+            return None
         if start == goal:
             return Direction.CENTER
 
@@ -230,6 +233,9 @@ class Grid():
         # نکته اینه که به مرور زمان میتونیم شعاع دفاع رو بیشتر کنیم.
         return position
 
+    def where_to_attack(self, position: Position, current_destination=None) -> Position:
+        return position
+
     def update_last_seens(self):
         for row in self.cells:
             for cell in row:
@@ -240,13 +246,14 @@ class Grid():
     def get_harvest_score(self, start, location):
         path = self.bfs(start, location)
         distance = len(path) if path is not None else np.inf
+        unknown_distance = self.count_unknown_cells(path)
+        known_distance = distance - unknown_distance
+        effective_distance = known_distance + UNKNOWN_DISTANCE_PENALTY * unknown_distance
         resource_value = self[location].get_resource_score()
-        score = resource_value/distance
+        score = resource_value/effective_distance
         return score
 
     def get_harvest_location(self, position: Position) -> Position:
-        # we assume the nearest location is the best
-        # TODO: but may be there are better choices!
         locations = [self[Position(x, y)].position
                      for x in range(self.width) for y in range(self.height)
                      if self[Position(x, y)].get_resource_score()]
