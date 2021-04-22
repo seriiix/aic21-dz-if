@@ -235,17 +235,18 @@ class Env():
                 #     # TODO: to be checked --> does it need to calculate based on base's health??
                 #     reward += REWARD_GOT_DAMAGED_BASE
                 # elif defender_pos == self.position:
-                if self.grid.manhattan(defender_pos, attacker_pos) > 4 or not self.grid[attacker_pos].enemy_soldiers:
-                    # ENEMY BASE IS FOUND!
-                    self.grid[defender_pos].safe = False
-                    self.grid[attacker_pos].enemy_base = True
-                    self.grid.enemy_base = attacker_pos
-                    self.grid.unsafe_zone_seen = True
-                    self.messages.append(Chat(
-                        type=ChatKind.OBSERVATION_SIMPLE,
-                        data=ChatObservationSimple(
-                        attacker_pos, CellKind.ENEMY_BASE)
-                    ))
+                if not self.grid.enemy_base:
+                    if self.grid.manhattan(defender_pos, attacker_pos) > 4 or not self.grid[attacker_pos].enemy_soldiers:
+                        # ENEMY BASE IS FOUND!
+                        self.grid[defender_pos].safe = False
+                        self.grid[attacker_pos].enemy_base = True
+                        self.grid.enemy_base = attacker_pos
+                        self.grid.unsafe_zone_seen = True
+                        self.messages.append(Chat(
+                            type=ChatKind.OBSERVATION_SIMPLE,
+                            data=ChatObservationSimple(
+                            attacker_pos, CellKind.ENEMY_BASE)
+                        ))
                     
             # else:
             #     # Attacking from us
@@ -262,9 +263,13 @@ class Env():
         self.grid.enemies_in_sight_curr = np.zeros((self.grid.height, self.grid.width))
         self.add_vision_to_map()
         self.handle_new_messages()
-        # TODO VVVV
         self.add_attack_data_to_map()
         self.grid.update_last_seens()
+    
+    def can_we_attack(self):
+        "basically telling us that is enemy base seen?"
+        # TODO : More analysis can be done here. Ex. condition on current soldiers
+        return self.grid.unsafe_zone_seen or self.grid.enemy_base
 
     def update_task(self):
         "analyzes the map and trys to get the most important task"
@@ -346,7 +351,7 @@ class Env():
                     return
         
         elif self.game.ant.antType == AntType.SARBAAZ.value:
-            if self.grid.can_we_attack():
+            if self.can_we_attack():
                 self.task = Task(TaskType.BASE_ATTACK, 
                     destination=self.grid.where_to_attack(
                         position=self.position
