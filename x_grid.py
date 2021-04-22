@@ -313,4 +313,4 @@ class Grid():
         # currently we just pick a random unseen but near to seens position
         locations = self.get_seen_cells_neighbours()
         weights = [1/self.manhattan(start, location) for location in locations]
-        return choices(locations, weights=weights, k=1) if len(locations) else start
+        return choices(locations, weights=weights, k=1)[0] if len(locations) else start
