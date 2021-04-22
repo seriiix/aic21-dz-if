@@ -363,8 +363,8 @@ class Env():
                     if self.position == self.task.destination:
                         return
                 elif self.task.type == TaskType.DEFEND:
-                    self.task.destination=self.grid.where_to_defend(
-                        position=self.position, current_destination=self.task.destination)
+                    # self.task.destination=self.grid.where_to_defend(
+                    #     position=self.position, current_destination=self.task.destination)
                     return
                 # defend is different with watch and it does not follow the enemy
                 elif self.task.type == TaskType.WATCH:
