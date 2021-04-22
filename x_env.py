@@ -399,6 +399,7 @@ class Env():
                         return
                 elif self.task.type == TaskType.DEFEND:
                     if self.grid.is_enemy_in_sight():
+                        # TODO: use attack data
                         destination = self.grid.get_one_enemy_position()
                         self.task = Task(type=TaskType.KILL,
                                 destination=destination
@@ -421,13 +422,13 @@ class Env():
                 #             self.position, current_destination=None)
 
                 elif self.task.type == TaskType.EXPLORE:
-                    if self.grid.is_enemy_in_sight():
-                        destination = self.grid.get_one_enemy_position()
-                        self.task = Task(type=TaskType.KILL,
-                                destination=destination
-                            )
-                        return
-                    elif self.grid[self.task.destination].invalid:
+                    # if self.grid.is_enemy_in_sight():
+                    #     destination = self.grid.get_one_enemy_position()
+                    #     self.task = Task(type=TaskType.KILL,
+                    #             destination=destination
+                    #         )
+                    #     return
+                    if self.grid[self.task.destination].invalid:
                         self.task.destination=self.grid.get_explore_location(
                             self.position)
                     elif self.position == self.task.destination:

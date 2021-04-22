@@ -306,13 +306,10 @@ class Grid():
                         position = self.get_neighbour(cell.position, direction)
                         if self.is_good_to_explore(position) and not position in locations:
                             locations.append(position)
-        print(locations)
         return locations
 
     def get_explore_location(self, start: Position) -> Position:
-        # currently we just pick a random unseen but near to seens position
         locations = self.get_seen_cells_neighbours()
         weights = [1/self.manhattan(start, location) for location in locations]
-        # print(weights)
         location = choices(locations, weights=weights, k=1)[0] if len(locations) else start
         return location
