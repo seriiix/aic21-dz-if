@@ -69,11 +69,8 @@ class Grid():
     def __setitem__(self, position: Position, value: MapCell):
         self.cells[position.y][position.x] = deepcopy(value)
 
-    def get_defenders_count(self):
-        # TODO: باید یه جوری در بیاریم که الان چن نفر دارن دفاع میکنن از بیس
-        return MIN_DEFENDERS
-
     def is_enemy_killed(self):
+        "useful for soldiers when they chase enemy ants"
         return int(np.sum(self.enemies_in_sight_curr - self.enemies_in_sight_prev)) == 0
 
     def set_ants(self, ants, position):
@@ -107,10 +104,6 @@ class Grid():
             ind = np.unravel_index(
                 self.enemies_in_sight_prev.argmax(), self.enemies_in_sight_prev.shape)
             return Position(ind[1], ind[0])
-
-    def can_we_attack(self):
-        # TODO : More analysis can be done here
-        return self.unsafe_zone_seen or self.enemy_base
 
     def fix_pos(self, pos: Position):
         if pos.x >= self.width:
@@ -166,9 +159,6 @@ class Grid():
             return None
         if start == goal:
             return Direction.CENTER
-
-        # print(path)
-        # input()
 
         curr_step = path[0]
         next_step = path[1]
@@ -231,10 +221,15 @@ class Grid():
         # بعد هر سرباز میگه من الان اینجام و ما چک میکنیم اونجایی که الان داره دفاع میکنه خوبه یا نه
         # اگه خوب نباشه یه جای بهتر میدیم بهش. چون ممکنه قبلا اون نقطه دیده نمیشده و بهش اساین شده
         # نکته اینه که به مرور زمان میتونیم شعاع دفاع رو بیشتر کنیم.
-        return position
+        radius_cells = [cell.position for row in self.cells for cell in row 
+            if self.manhattan(cell.position, self.base_pos)==DEFEND_RADIUS and not cell.invalid
+        ]
+        radius_cell_paths = [self.bfs(self.base_pos, position, known=True) for position in radius_cell_points ]
+        radius_cell_points = [len(path) if path else .001 for path in radius_cell_paths]
+        return choices(radius_cells, weights=radius_cell_points, k=1)[0]
 
     def where_to_attack(self, position: Position, current_destination=None) -> Position:
-        return position
+        return self.enemy_base
 
     def update_last_seens(self):
         for row in self.cells:
