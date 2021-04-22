@@ -25,6 +25,8 @@ class Env():
         self.explorers = 0
         self.soldiers = 0
         self.workers = 0
+        self.saw_new_resource = False
+        self.is_explorer = False
 
     def init_grid(self, game):
         self.game = game
@@ -90,7 +92,7 @@ class Env():
         # TODO : not all chats
         for chat in chats:
             ant_id, msgs = decode(chat.text)
-            print("recieve from",ant_id, msgs)
+            # print("recieve from",ant_id, msgs)
             for msg in msgs:
                 cell_pos = msg.data.position
                 self.grid[cell_pos].last_seen = -1
@@ -118,9 +120,13 @@ class Env():
                 elif msg.type == ChatKind.OBSERVATION_VALUE:
                     self.grid[cell_pos].wall = False
                     if msg.data.cell_kind == CellKind.BREAD.value:
+                        if self.grid[cell_pos].get_resource_score() == 0 and msg.data.value != 0 or self.grid[cell_pos].get_resource_score() != 0 and msg.data.value == 0:
+                            self.saw_new_resource = True
                         self.grid[cell_pos].bread_value = msg.data.value
                         self.grid[cell_pos].grass_value = 0
                     elif msg.data.cell_kind == CellKind.GRASS.value:
+                        if self.grid[cell_pos].get_resource_score() == 0 and msg.data.value != 0 or self.grid[cell_pos].get_resource_score() != 0 and msg.data.value == 0:
+                            self.saw_new_resource = True
                         self.grid[cell_pos].bread_value = 0
                         self.grid[cell_pos].grass_value = msg.data.value
                     elif msg.data.cell_kind == CellKind.ENEMY_SOLDIER.value:
@@ -163,6 +169,8 @@ class Env():
 
                     # RESOURCES
                     if cell.resource_type == ResourceType.BREAD.value:
+                        if self.grid[cell_pos].get_resource_score() == 0:
+                            self.saw_new_resource = True
                         if self.grid[cell_pos].bread_value != cell.resource_value:
                             self.grid[cell_pos].bread_value = cell.resource_value
                             self.grid[cell_pos].grass_value = 0
@@ -173,6 +181,8 @@ class Env():
                             )
                             self.messages.append(new_message)
                     if cell.resource_type == ResourceType.GRASS.value:
+                        if self.grid[cell_pos].get_resource_score() == 0:
+                            self.saw_new_resource = True
                         if self.grid[cell_pos].grass_value != cell.resource_value:
                             self.grid[cell_pos].grass_value = cell.resource_value
                             self.grid[cell_pos].bread_value = 0
@@ -183,6 +193,8 @@ class Env():
                             )
                             self.messages.append(new_message)
                     if cell.resource_value == 0:
+                        if self.grid[cell_pos].get_resource_score() != 0:
+                            self.saw_new_resource = True
                         if self.grid[cell_pos].grass_value != cell.resource_value:
                             self.grid[cell_pos].grass_value = 0
                             new_message = Chat(
@@ -274,6 +286,11 @@ class Env():
     def update_task(self):
         "analyzes the map and trys to get the most important task"
         if self.game.ant.antType == AntType.KARGAR.value:
+            # TODO: if not full, search and harvest more!
+            if self.game.ant.currentResource and self.game.ant.currentResource.value > 0:
+                self.task = Task(type=TaskType.RETURN,
+                                destination=self.base_pos)
+                return
             if self.task:
                 if self.task.type == TaskType.RETURN:
                     if self.position == self.base_pos:
@@ -284,7 +301,6 @@ class Env():
 
                 elif self.task.type == TaskType.HARVEST:
                     if self.position == self.task.destination:
-                        # TODO: if not full search and harvest more!
                         if self.game.ant.currentResource and self.game.ant.currentResource.value > 0:
                             self.task = Task(type=TaskType.RETURN,
                                             destination=self.base_pos)
@@ -293,7 +309,19 @@ class Env():
                             self.task = None
                             self.update_task()
                             return
-                    
+
+                    if self.saw_new_resource:
+                        harvest_location = self.grid.get_harvest_location(
+                        self.position)
+                        if harvest_location:
+                            self.task = Task(type=TaskType.HARVEST,
+                                            destination=harvest_location)
+                            new_message = Chat(
+                                type=ChatKind.OBSERVATION_SIMPLE,
+                                data=ChatObservationSimple(
+                                self.task.destination, CellKind.WANT_TO_HARVEST)
+                            )
+
                     # Assume that the worker is insisting to do its task
                     if not self.grid[self.task.destination].get_resource_score():  # Resource has been eaten by others
                         self.task = None
@@ -383,11 +411,29 @@ class Env():
                     elif self.position == self.task.destination:
                         self.task.destination=self.grid.where_to_watch(
                             self.position, current_destination=None)
+                elif self.task.type == TaskType.EXPLORE:
+                    if self.grid.is_enemy_in_sight():
+                        destination = self.grid.get_one_enemy_position()
+                        self.task = Task(type=TaskType.KILL,
+                                destination=destination
+                            )
+                        return
+                    elif self.grid[self.task.destination].invalid:
+                        self.task.destination=self.grid.get_explore_location(
+                            self.position)
+                    elif self.position == self.task.destination:
+                        self.task.destination=self.grid.get_explore_location(
+                            self.position)
                 elif self.task.type == TaskType.KILL:
                     if self.grid.is_enemy_killed():
-                        destination = self.grid.where_to_watch(self.position, current_destination=self.task.destination)
-                        self.task = Task(TaskType.WATCH, destination)
-                        return
+                        if self.is_explorer:
+                            destination = self.grid.get_explore_location(self.position)
+                            self.task = Task(TaskType.EXPLORE, destination)
+                            return
+                        else:
+                            destination = self.grid.where_to_watch(self.position, current_destination=self.task.destination)
+                            self.task = Task(TaskType.WATCH, destination)
+                            return
                     else:
                         self.task.destination = self.grid.get_one_enemy_position()
                         return
@@ -403,6 +449,18 @@ class Env():
                             self.task.destination, CellKind.WANT_TO_DEFEND)
                         )
                     self.messages.append(new_message)
+                elif self.explorers < MIN_EXPLORERS:
+                    self.is_explorer = True
+                    self.task = Task(TaskType.EXPLORE,
+                        destination=self.grid.get_explore_location(
+                            position=self.position
+                        ))
+                    new_message = Chat(
+                            type=ChatKind.OBSERVATION_SIMPLE,
+                            data=ChatObservationSimple(
+                            self.task.destination, CellKind.WANT_TO_EXPLORE)
+                        )
+                    self.messages.append(new_message)
                 else:
                     self.task = Task(TaskType.WATCH,
                         destination=self.grid.where_to_watch(
@@ -410,7 +468,7 @@ class Env():
                         ))
 
     def generate_message(self, direction, ant_id):
-        print("> sending from",ant_id, self.messages)
+        # print("> sending from",ant_id, self.messages)
         message, priority = encode(ant_id, self.messages)
         return message, priority
 
@@ -427,6 +485,7 @@ class Env():
 
     def run_one_turn(self, ant_id):
         self.messages = []
+        self.saw_new_resource = False
         self.position = Position(self.game.ant.currentX, self.game.ant.currentY)
         self.update_grid()
         self.update_task()

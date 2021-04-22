@@ -86,6 +86,8 @@ class CellKind(Enum):
             return CellKind.WANT_TO_DEFEND
         if kind == 8:
             return CellKind.WANT_TO_HARVEST
+        if kind == 10:
+            return CellKind.WANT_TO_EXPLORE
 
         return None
 
@@ -123,6 +125,10 @@ class ChatObservationSimple():
             return 3
         if self.cell_kind == CellKind.ENEMY_SOLDIER:
             return 6
+        if self.cell_kind == CellKind.WANT_TO_DEFEND:
+            return 50
+        if self.cell_kind == CellKind.WANT_TO_EXPLORE:
+            return 40
         if self.cell_kind == CellKind.ENEMY_BASE:
             return 100
         return 0
