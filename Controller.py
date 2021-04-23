@@ -19,8 +19,7 @@ class Controller:
         self.network = None
         self.queue = Queue()
         self.client = AI()
-        self.argNames = ["AICHostIP", "AICHostPort",
-                         "AICToken", "AICRetryDelay"]
+        self.argNames = ["AICHostIP", "AICHostPort", "AICToken", "AICRetryDelay"]
         self.argDefaults = [
             "127.0.0.1",
             7099,
@@ -35,8 +34,7 @@ class Controller:
 
         elif message[ServerConstants.KEY_TYPE] == ServerConstants.MESSAGE_TYPE_TURN:
             gameStatus = CurrentState(message[ServerConstants.KEY_INFO])
-            threading.Thread(target=self.launch_on_thread,
-                             args=([gameStatus])).start()
+            threading.Thread(target=self.launch_on_thread, args=([gameStatus])).start()
 
         elif message[ServerConstants.KEY_TYPE] == ServerConstants.MESSAGE_TYPE_KILL:
             exit(4)
@@ -56,8 +54,7 @@ class Controller:
         self.network.send({"type": 1, "info": {"direction": direction}})
 
     def send_chat_message(self, chat, value):
-        self.network.send(
-            {"type": 2, "info": {"message": chat, "value": value}})
+        self.network.send({"type": 2, "info": {"message": chat, "value": value}})
 
     def send_end_message(self):
         self.network.send({"type": 6, "info": {}})
@@ -71,9 +68,9 @@ class Controller:
         start = time.time() * 1000
         (message, value, direction) = self.client.turn()
         diff = time.time() * 1000 - start
-        if diff > 10000:
+        if diff > 2000:
             pass
-        elif diff > 5000:
+        elif diff > 500:
             self.send_direction_message(Direction.CENTER.value)
         else:
             if direction is not None:
