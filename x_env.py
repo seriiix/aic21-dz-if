@@ -239,7 +239,7 @@ class Env():
 
                     # ENEMY BASE
                     if cell.type == CellType.BASE.value:
-                        if not cell_pos == self.base_pos:
+                        if not cell_pos == self.base_pos and not self.grid.enemy_base:
                             self.grid[cell_pos].enemy_base = True
                             self.grid.enemy_base = cell_pos
                             new_message = Chat(
