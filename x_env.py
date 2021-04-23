@@ -266,7 +266,7 @@ class Env():
                 if not self.grid.enemy_base:
                     # add below to make enemy base messages exclusive
                     # self.previous_position and defender_pos == self.previous_position and
-                    if (self.grid.manhattan(defender_pos, attacker_pos) > 4 or not self.grid[attacker_pos].enemy_soldiers) and (not (attacker_pos == self.base_pos)):
+                    if (self.grid.manhattan(defender_pos, attacker_pos) > 4) and (not (attacker_pos == self.base_pos)):
                         # ENEMY BASE IS FOUND!
                         self.grid[defender_pos].safe = False
                         self.grid[attacker_pos].enemy_base = True
