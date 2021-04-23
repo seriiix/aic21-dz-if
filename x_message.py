@@ -92,6 +92,40 @@ class CellKind(Enum):
         return None
 
 
+def get_kind_score(kind: CellKind):
+    if kind == CellKind.WALL:
+        return 1
+    if kind == CellKind.GRASS:
+        return 6
+    if kind == CellKind.BREAD:
+        return 5
+    if kind == CellKind.UNSAFE:
+        return 1
+    if kind == CellKind.ENEMY_BASE:
+        return 1000
+    if kind == CellKind.ENEMY_WORKER:
+        return 3
+    if kind == CellKind.ENEMY_SOLDIER:
+        return 6
+    if kind == CellKind.WANT_TO_DEFEND:
+        return 50
+    if kind == CellKind.WANT_TO_WATCH:
+        return 30
+    if kind == CellKind.WANT_TO_EXPLORE:
+        return 40
+    if kind == CellKind.SOLDIER_BORN:
+        return 3
+    if kind == CellKind.EXPLORER_DIED:
+        return 3
+    if kind == CellKind.DEFENDER_DIED:
+        return 3
+    if kind == CellKind.WORKER_BORN:
+        return 3
+    if kind == CellKind.WORKER_DIED:
+        return 3
+    return 0
+
+
 class Chat():
     def __init__(self, type, data) -> None:
         self.type: ChatKind = type
@@ -109,7 +143,8 @@ class ChatObservationSimple():
     def __init__(self, position=None, cell_kind=None) -> None:
         self.position: Position = position
         self.cell_kind: CellKind = cell_kind
-        self.score = self.get_score()
+        self.score = 0
+        self.get_score()
 
         # CONSTS
         self.POSITION_BITS = 15
@@ -117,21 +152,7 @@ class ChatObservationSimple():
         self.MESSAGE_BITS = self.POSITION_BITS + self.CELL_KIND_BITS
 
     def get_score(self) -> int:
-        if self.cell_kind == CellKind.WALL:
-            return 1
-        if self.cell_kind == CellKind.UNSAFE:
-            return 1
-        if self.cell_kind == CellKind.ENEMY_WORKER:
-            return 3
-        if self.cell_kind == CellKind.ENEMY_SOLDIER:
-            return 6
-        if self.cell_kind == CellKind.WANT_TO_DEFEND:
-            return 50
-        if self.cell_kind == CellKind.WANT_TO_EXPLORE:
-            return 40
-        if self.cell_kind == CellKind.ENEMY_BASE:
-            return 100
-        return 0
+        self.score = get_kind_score(self.cell_kind)
 
     def __str__(self) -> str:
         return f"{self.position} {self.cell_kind}"
@@ -145,7 +166,8 @@ class ChatObservationValue():
         self.position: Position = position
         self.cell_kind: CellKind = cell_kind
         self.value: int = value
-        self.score = self.get_score()
+        self.score = 0
+        self.get_score()
 
         # CONSTS
         self.POSITION_BITS = 15
@@ -154,11 +176,7 @@ class ChatObservationValue():
         self.MESSAGE_BITS = self.POSITION_BITS + self.CELL_KIND_BITS + self.VALUE_BITS
 
     def get_score(self) -> int:
-        if self.cell_kind == CellKind.GRASS:
-            return 5
-        if self.cell_kind == CellKind.BREAD:
-            return 5
-        return 0
+        self.score = get_kind_score(self.cell_kind)
 
     def __str__(self) -> str:
         return f"{self.position} {self.cell_kind} {self.value}"
@@ -170,16 +188,15 @@ class ChatObservationValue():
 class ChatSingleCellKind():
     def __init__(self, cell_kind=None) -> None:
         self.cell_kind = cell_kind
-        self.score = self.get_score()
+        self.score = 0
+        self.get_score()
 
         # CONSTS
         self.CELL_KIND_BITS = 4
         self.MESSAGE_BITS = self.CELL_KIND_BITS
 
     def get_score(self) -> int:
-        if self.cell_kind == CellKind.SOLDIER_BORN:
-            return 3
-        return 0
+        self.score = get_kind_score(self.cell_kind)
 
     def __str__(self) -> str:
         return f"{self.cell_kind}"
@@ -201,6 +218,8 @@ def encode(ant_id, messages: List[Chat]) -> str:
     s = ''
     total_score = 0
     bits_remaining = MESSAGE_LENGTH * CHAR_BITS
+
+    print(messages)
 
     # create ant id with ANT_ID_BITS bits
     ant_id_bin = to_bin_with_fixed_length(ant_id, ANT_ID_BITS)
@@ -282,6 +301,7 @@ def parser(bin):
             bin = bin[chat.POSITION_BITS:]
             kind = ord(chr(int(bin[:chat.CELL_KIND_BITS], 2)))
             chat.cell_kind = CellKind(kind)
+            chat.get_score()
             bin = bin[chat.CELL_KIND_BITS:]
             msgs.append(
                 Chat(type=ChatKind.OBSERVATION_SIMPLE, data=deepcopy(chat)))
@@ -297,6 +317,7 @@ def parser(bin):
             bin = bin[chat.POSITION_BITS:]
             kind = ord(chr(int(bin[:chat.CELL_KIND_BITS], 2)))
             chat.cell_kind = CellKind(kind)
+            chat.get_score()
             bin = bin[chat.CELL_KIND_BITS:]
             value = ord(chr(int(bin[:chat.VALUE_BITS], 2)))
             chat.value = value
@@ -311,6 +332,7 @@ def parser(bin):
                 break
             kind = ord(chr(int(bin[:chat.CELL_KIND_BITS], 2)))
             chat.cell_kind = CellKind(kind)
+            chat.get_score()
             bin = bin[chat.CELL_KIND_BITS:]
             msgs.append(
                 Chat(type=ChatKind.SINGLE_CELL_KIND, data=deepcopy(chat)))
@@ -330,14 +352,14 @@ def decode(msg: str):
 if __name__ == '__main__':
     f_msg1 = Chat(type=ChatKind.OBSERVATION_SIMPLE,
                   data=ChatObservationSimple(
-                      Position(15, 12), CellKind.WALL))
+                      Position(15, 12), CellKind.ENEMY_BASE))
 
     f_msg2 = Chat(type=ChatKind.OBSERVATION_VALUE,
                   data=ChatObservationValue(
-                      Position(3, 4), CellKind.GRASS, 55))
+                      Position(3, 4), CellKind.BREAD, 55))
 
     f_msg3 = Chat(type=ChatKind.SINGLE_CELL_KIND,
-                  data=ChatSingleCellKind(CellKind.SOLDIER_BORN))
+                  data=ChatSingleCellKind(CellKind.EXPLORER_DIED))
 
     m, sc = encode(
         1337, [f_msg1, f_msg2, f_msg3, f_msg1, f_msg2])
