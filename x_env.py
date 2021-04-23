@@ -264,7 +264,7 @@ class Env():
             # Getting damaged
             if attack.is_attacker_enemy:
                 if not self.grid.enemy_base:
-                    if self.previous_position and defender_pos == self.previous_position and (self.grid.manhattan(defender_pos, attacker_pos) > 4 or not self.grid[attacker_pos].enemy_soldiers) and attacker_pos != self.base_pos:
+                    if self.previous_position and defender_pos == self.previous_position and (self.grid.manhattan(defender_pos, attacker_pos) > 4 or not self.grid[attacker_pos].enemy_soldiers) and (not (attacker_pos == self.base_pos)):
                         # ENEMY BASE IS FOUND!
                         self.grid[defender_pos].safe = False
                         self.grid[attacker_pos].enemy_base = True
