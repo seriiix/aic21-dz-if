@@ -18,6 +18,7 @@ class Task:
     def __init__(self, type: TaskType, destination: Position):
         self.type: TaskType = type
         self.destination: Position = destination
+        self.change_idea_times: int = 0
 
     def __str__(self):
         return f"Task(type={self.type}, dest={self.destination})"

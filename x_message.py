@@ -43,12 +43,12 @@ class CellKind(Enum):
     WALL = 0
     GRASS = 1
     BREAD = 2
-    UNSAFE = 3
+    INVALID = 3
     # if need more set CELL_KIND_BITS(s) to 3
 
     ENEMY_BASE = 4
-    ENEMY_WORKER = 5
-    ENEMY_SOLDIER = 6
+    ME_WORKER = 5
+    ME_SOLDIER = 6
 
     WANT_TO_DEFEND = 7
     WANT_TO_HARVEST = 8
@@ -62,7 +62,7 @@ class CellKind(Enum):
     EXPLORER_DIED = 12
     HELP_ME = 13
     LETS_FUCK_THIS_SHIT = 14
-    WORKER_DIED = 15
+    ME_EXPLORER = 15
 
     # if need more set CELL_KIND_BITS(s) to 5
 
@@ -75,13 +75,13 @@ class CellKind(Enum):
         if kind == 2:
             return CellKind.BREAD
         if kind == 3:
-            return CellKind.UNSAFE
+            return CellKind.INVALID
         if kind == 4:
             return CellKind.ENEMY_BASE
         if kind == 5:
-            return CellKind.ENEMY_WORKER
+            return CellKind.ME_WORKER
         if kind == 6:
-            return CellKind.ENEMY_SOLDIER
+            return CellKind.ME_SOLDIER
         if kind == 7:
             return CellKind.WANT_TO_DEFEND
         if kind == 8:
@@ -94,6 +94,8 @@ class CellKind(Enum):
             return CellKind.HELP_ME
         if kind == 14:
             return CellKind.LETS_FUCK_THIS_SHIT
+        if kind == 15:
+            return CellKind.ME_EXPLORER
 
         return None
 
@@ -125,12 +127,14 @@ class ChatObservationSimple():
     def get_score(self) -> int:
         if self.cell_kind == CellKind.WALL:
             return 1
-        if self.cell_kind == CellKind.UNSAFE:
-            return 1
-        if self.cell_kind == CellKind.ENEMY_WORKER:
-            return 3
-        if self.cell_kind == CellKind.ENEMY_SOLDIER:
-            return 6
+        if self.cell_kind == CellKind.ME_WORKER:
+            return 2
+        if self.cell_kind == CellKind.ME_SOLDIER:
+            return 2
+        if self.cell_kind == CellKind.INVALID:
+            return 4
+        if self.cell_kind == CellKind.ME_EXPLORER:
+            return 100
         if self.cell_kind == CellKind.HELP_ME:
             return 175
         if self.cell_kind == CellKind.WANT_TO_DEFEND:
@@ -138,11 +142,11 @@ class ChatObservationSimple():
         if self.cell_kind == CellKind.WANT_TO_EXPLORE:
             return 185
         if self.cell_kind == CellKind.WANT_TO_GATHER:
-            return 190
+            return 1500
         if self.cell_kind == CellKind.LETS_FUCK_THIS_SHIT:
-            return 196
+            return 1960
         if self.cell_kind == CellKind.ENEMY_BASE:
-            return 210
+            return 2600
         return 0
 
     def __str__(self) -> str:
@@ -340,19 +344,23 @@ def decode(msg: str):
 
 # tests
 if __name__ == '__main__':
+    print(CellKind.GRASS)
     f_msg1 = Chat(type=ChatKind.OBSERVATION_SIMPLE,
                   data=ChatObservationSimple(
                       Position(15, 12), CellKind.WALL))
+
+    print(f_msg1.score)
 
     f_msg2 = Chat(type=ChatKind.OBSERVATION_VALUE,
                   data=ChatObservationValue(
                       Position(3, 4), CellKind.GRASS, 55))
 
     f_msg3 = Chat(type=ChatKind.SINGLE_CELL_KIND,
-                  data=ChatSingleCellKind(CellKind.SOLDIER_BORN))
+                  data=ChatSingleCellKind(CellKind.ENEMY_BASE))
 
     m, sc = encode(
         1337, [f_msg1, f_msg2, f_msg3, f_msg1, f_msg2])
+    print("SCORE",sc)
     print('length of encoded msg:', len(m))
     ant_id, msgs = decode(m)
     print('decoded msg:', ant_id, msgs)
