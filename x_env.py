@@ -28,6 +28,7 @@ class Env():
         self.saw_new_resource = False
         self.is_explorer = False
         self.gathering_position = None
+        self.previous_position: Position = None
         # when we are gathered and we want to attack - > sets in handle message on LETS_FUCK
         self.attacking_position = None
         # when defending and enemy is trying to attack - > sets in handle message on HELP_ME
@@ -251,10 +252,6 @@ class Env():
                     else:
                         self.grid[cell_pos].enemy_base = False
 
-    def is_attak_from_enemy_base(self):
-        pass
-        # TODO:distance from enemy > 4 || position of attacker has no enemy soldier whitin
-
     def add_attack_data_to_map(self):
         ant = self.game.ant
         attacks = ant.attacks
@@ -267,7 +264,7 @@ class Env():
             # Getting damaged
             if attack.is_attacker_enemy:
                 if not self.grid.enemy_base:
-                    if defender_pos == self.position and (self.grid.manhattan(defender_pos, attacker_pos) > 4 or not self.grid[attacker_pos].enemy_soldiers):
+                    if defender_pos == self.previous_position and (self.grid.manhattan(defender_pos, attacker_pos) > 4 or not self.grid[attacker_pos].enemy_soldiers):
                         # ENEMY BASE IS FOUND!
                         self.grid[defender_pos].safe = False
                         self.grid[attacker_pos].enemy_base = True
@@ -561,7 +558,9 @@ class Env():
         self.update_grid()
         self.update_task()
         direction = self.get_direction()
+        self.previous_position = self.position
 
         # print(direction, self.task)
         message, priority = self.generate_message(direction, ant_id)
+        # return message, priority, Direction.RIGHT.value
         return message, priority,  direction.value
