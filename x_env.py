@@ -483,6 +483,9 @@ class Env():
         return message, priority
 
     def get_direction(self):
+        if not self.task:
+            return Direction.CENTER
+
         direction = self.grid.get_direction(self.position, self.task.destination)
         if direction is None:
             self.grid[self.task.destination].invalid = True
