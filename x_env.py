@@ -282,6 +282,7 @@ class Env():
                             data=ChatObservationSimple(
                                 self.gathering_position, CellKind.WANT_TO_GATHER)
                         ))
+                        # TODO: RETURN FROM SAFE POSITIONS
 
                 elif self.task.type == TaskType.DEFEND:
                     self.messages.append(Chat(
@@ -421,8 +422,12 @@ class Env():
                              destination=self.attacking_position)
 
         elif self.get_last_turn_number() > 72:
-            self.task = Task(
-                TaskType.EXPLORE, destination=self.grid.get_explore_location(self.position))
+            if self.grid.enemy_base:
+                self.task = Task(
+                    TaskType.BASE_ATTACK, destination=self.grid.enemy_base)
+            else:
+                self.task = Task(
+                    TaskType.EXPLORE, destination=self.grid.get_explore_location(self.position))
 
         elif self.gathering_position:
             self.task = Task(
