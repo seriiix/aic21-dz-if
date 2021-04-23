@@ -102,35 +102,35 @@ class CellKind(Enum):
 
 def get_kind_score(kind: CellKind):
     if kind == CellKind.WALL:
-        return 1
+        return 5
     if kind == CellKind.GRASS:
-        return 6
+        return 5
     if kind == CellKind.BREAD:
         return 5
     if kind == CellKind.INVALID:
-        return 1
-    if kind == CellKind.ENEMY_BASE:
-        return 1000
+        return 100
     if kind == CellKind.ME_WORKER:
         return 3
     if kind == CellKind.ME_SOLDIER:
         return 6
+    if kind == CellKind.ENEMY_BASE:
+        return 2000
+    
     if kind == CellKind.WANT_TO_DEFEND:
-        return 50
-    if kind == CellKind.WANT_TO_DEFEND:
-        return 30
+        return 10
     if kind == CellKind.WANT_TO_HARVEST:
-        return 40
+        return 10
     if kind == CellKind.WANT_TO_GATHER:
-        return 3
+        return 1500
     if kind == CellKind.WANT_TO_EXPLORE:
-        return 3
+        return 200
+
     if kind == CellKind.HELP_ME:
-        return 3
+        return 150
     if kind == CellKind.LETS_FUCK_THIS_SHIT:
-        return 3
+        return 3000
     if kind == CellKind.ME_EXPLORER:
-        return 3
+        return 100
     return 0
 
 
