@@ -5,10 +5,10 @@ from collections import deque
 from typing import List
 import numpy as np
 
-
 from Model import Ant, Direction, Game, Map, Resource, ResourceType, CellType, AntType, AntTeam
 from x_consts import *
 from x_helpers import Position
+from x_task import TaskType
 
 
 class MapCell():
@@ -180,8 +180,11 @@ class Grid():
                 cntr += 1
         return cntr
 
-    def get_direction(self, start: Position, goal: Position):
-        path = self.bfs(start, goal)
+    def get_direction(self, start: Position, goal: Position, task=None):
+        random = True
+        if task and task.type == TaskType.BASE_ATTACK:
+            random = False
+        path = self.bfs(start, goal, random=random)
         if path is None:
             self[goal].invalid = True
             return None
@@ -346,7 +349,7 @@ class Grid():
     def get_gathering_position(self, position):
         # TODO: better option you shoud get optimal value by knowing soldier distances
         path = self.bfs(self.base_pos, position, known=True)
-        return path[len(path)//2]
+        return path[len(path)//GATHERING_PORTION]
 
     def get_explore_location(self, start: Position) -> Position:
         locations = self.get_seen_cells_neighbours()

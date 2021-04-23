@@ -511,9 +511,10 @@ class Env():
     def get_direction(self):
         if not self.task:
             return Direction.CENTER
-
+        
         direction = self.grid.get_direction(
-            self.position, self.task.destination)
+            self.position, self.task.destination, task=self.task)
+
         if direction is None:
             self.grid[self.task.destination].invalid = True
             self.task = None
@@ -524,7 +525,7 @@ class Env():
                     self.task.destination, CellKind.INVALID)
             ))
             direction = self.grid.get_direction(
-                self.position, self.task.destination)
+                self.position, self.task.destination, task=self.task)
             if direction is None:
                 self.grid[self.task.destination].invalid = True
                 self.task = None
