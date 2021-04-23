@@ -98,7 +98,7 @@ class Env():
                     elif msg.data.cell_kind == CellKind.ME_WORKER:
                         self.grid.make_cells_arround_position_known(cell_pos)
                     elif msg.data.cell_kind == CellKind.ME_EXPLORER:
-                        print("reveded EXPLORER")
+                        # print("reveded EXPLORER")
                         self.grid.make_cells_arround_position_known(cell_pos)
 
                 elif msg.type == ChatKind.OBSERVATION_VALUE:
