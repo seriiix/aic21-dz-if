@@ -33,8 +33,8 @@ class MapCell():
         self.enemy_soldiers = 0
 
         # TODO:
-        # self.want_to_defenders = 0
-        # self.want_to_harvesters = 0
+        self.want_to_defenders = 0
+        self.want_to_harvesters = 0
 
     def __eq__(self, other) -> bool:
         if type(other) == MapCell:
@@ -47,9 +47,17 @@ class MapCell():
     def __repr__(self) -> str:
         return f'Cell[{self.position}]'
 
-    def get_resource_score(self):
-        return self.grass_value * GRASS_SCORE + self.bread_value * BREAD_SCORE
-
+    def get_resource_score(self, type=None):
+        if self.invalid:
+            return 0
+        else:
+            if not type:
+                return self.grass_value * GRASS_SCORE + self.bread_value * BREAD_SCORE
+            else:
+                if type == ResourceType.GRASS.value:
+                    return self.grass_value
+                elif type == ResourceType.BREAD.value:
+                    return self.bread_value
 
 class Grid():
     def __init__(self, width, height, base_pos):
@@ -250,6 +258,11 @@ class Grid():
         return choices(radius_cells, weights=radius_cell_points, k=1)[0]
 
     def where_to_attack(self, position: Position, current_destination=None) -> Position:
+        for row in self.cells:
+            for cell in row:
+                if self.manhattan(position, self.enemy_base) < MAX_ATTACK_DISTANCE_SOLDIER and cell.known:
+                    return 
+
         return self.enemy_base
 
     def update_last_seens(self):
@@ -259,12 +272,16 @@ class Grid():
                 if cell.last_seen == 0:
                     cell.last_seen = -1
 
-    def get_harvest_score(self, start, location):
+    def get_effective_distance(self, start, location):
         path = self.bfs(start, location)
         distance = len(path) if path is not None else np.inf
         unknown_distance = self.count_unknown_cells(path)
         known_distance = distance - unknown_distance
         effective_distance = known_distance + UNKNOWN_DISTANCE_PENALTY * unknown_distance
+        return effective_distance
+
+    def get_harvest_score(self, start, location):
+        effective_distance = self.get_effective_distance(start, location)
         resource_value = self[location].get_resource_score()
         score = resource_value/effective_distance
         return score
@@ -279,6 +296,20 @@ class Grid():
             return choices(locations, weights=weights, k=1)[0]
         else:
             return None
+
+    def get_over_harvest_location(self, current_resource, position):
+        if current_resource.value >= MIN_CARRY_FOR_ANT:
+            return None
+        else:
+            locations = [self[Position(x, y)].position
+                     for x in range(self.width) for y in range(self.height)
+                     if self[Position(x, y)].get_resource_score(type=current_resource.type)]
+            weights = [self.get_harvest_score(
+                        position, location) for location in locations]
+            if len(locations):
+                return choices(locations, weights=weights, k=1)[0]
+            else:
+                return None        
 
     def get_neighbour(self, position, direction):
         if direction == Direction.RIGHT:
@@ -308,8 +339,19 @@ class Grid():
                             locations.append(position)
         return locations
 
+    def get_gathering_position(self, position):
+        # TODO: better option you shoud get optimal value by knowing soldier distances
+        path = self.bfs(self.base_pos, position, known=True)
+        return path[len(path)//2]
+
     def get_explore_location(self, start: Position) -> Position:
         locations = self.get_seen_cells_neighbours()
         weights = [1/self.manhattan(start, location) for location in locations]
         location = choices(locations, weights=weights, k=1)[0] if len(locations) else start
         return location
+
+    def make_cells_arround_position_known(self, position):
+        for row in self.cells:
+            for cell in row:
+                if self.manhattan(position, cell.position) <= MAX_AGENT_VIEW_DISTANCE:
+                    cell.known = True

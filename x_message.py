@@ -43,26 +43,26 @@ class CellKind(Enum):
     WALL = 0
     GRASS = 1
     BREAD = 2
-    UNSAFE = 3
+    INVALID = 3
     # if need more set CELL_KIND_BITS(s) to 3
 
     ENEMY_BASE = 4
-    ENEMY_WORKER = 5
-    ENEMY_SOLDIER = 6
+    ME_WORKER = 5
+    ME_SOLDIER = 6
 
     WANT_TO_DEFEND = 7
     WANT_TO_HARVEST = 8
     # if need more set CELL_KIND_BITS(s) to 4
-    WANT_TO_WATCH = 9
+    WANT_TO_GATHER = 9
     WANT_TO_EXPLORE = 10
 
     # NO POSITION NEEDED
     # ONLY IF DAMAGED
     SOLDIER_BORN = 11
     EXPLORER_DIED = 12
-    DEFENDER_DIED = 13
-    WORKER_BORN = 14
-    WORKER_DIED = 15
+    HELP_ME = 13
+    LETS_FUCK_THIS_SHIT = 14
+    ME_EXPLORER = 15
 
     # if need more set CELL_KIND_BITS(s) to 5
 
@@ -75,19 +75,27 @@ class CellKind(Enum):
         if kind == 2:
             return CellKind.BREAD
         if kind == 3:
-            return CellKind.UNSAFE
+            return CellKind.INVALID
         if kind == 4:
             return CellKind.ENEMY_BASE
         if kind == 5:
-            return CellKind.ENEMY_WORKER
+            return CellKind.ME_WORKER
         if kind == 6:
-            return CellKind.ENEMY_SOLDIER
+            return CellKind.ME_SOLDIER
         if kind == 7:
             return CellKind.WANT_TO_DEFEND
         if kind == 8:
             return CellKind.WANT_TO_HARVEST
+        if kind == 9:
+            return CellKind.WANT_TO_GATHER
         if kind == 10:
             return CellKind.WANT_TO_EXPLORE
+        if kind == 13:
+            return CellKind.HELP_ME
+        if kind == 14:
+            return CellKind.LETS_FUCK_THIS_SHIT
+        if kind == 15:
+            return CellKind.ME_EXPLORER
 
         return None
 
@@ -99,29 +107,29 @@ def get_kind_score(kind: CellKind):
         return 6
     if kind == CellKind.BREAD:
         return 5
-    if kind == CellKind.UNSAFE:
+    if kind == CellKind.INVALID:
         return 1
     if kind == CellKind.ENEMY_BASE:
         return 1000
-    if kind == CellKind.ENEMY_WORKER:
+    if kind == CellKind.ME_WORKER:
         return 3
-    if kind == CellKind.ENEMY_SOLDIER:
+    if kind == CellKind.ME_SOLDIER:
         return 6
     if kind == CellKind.WANT_TO_DEFEND:
         return 50
-    if kind == CellKind.WANT_TO_WATCH:
+    if kind == CellKind.WANT_TO_DEFEND:
         return 30
-    if kind == CellKind.WANT_TO_EXPLORE:
+    if kind == CellKind.WANT_TO_HARVEST:
         return 40
-    if kind == CellKind.SOLDIER_BORN:
+    if kind == CellKind.WANT_TO_GATHER:
         return 3
-    if kind == CellKind.EXPLORER_DIED:
+    if kind == CellKind.WANT_TO_EXPLORE:
         return 3
-    if kind == CellKind.DEFENDER_DIED:
+    if kind == CellKind.HELP_ME:
         return 3
-    if kind == CellKind.WORKER_BORN:
+    if kind == CellKind.LETS_FUCK_THIS_SHIT:
         return 3
-    if kind == CellKind.WORKER_DIED:
+    if kind == CellKind.ME_EXPLORER:
         return 3
     return 0
 
@@ -218,8 +226,6 @@ def encode(ant_id, messages: List[Chat]) -> str:
     s = ''
     total_score = 0
     bits_remaining = MESSAGE_LENGTH * CHAR_BITS
-
-    print(messages)
 
     # create ant id with ANT_ID_BITS bits
     ant_id_bin = to_bin_with_fixed_length(ant_id, ANT_ID_BITS)
@@ -356,13 +362,14 @@ if __name__ == '__main__':
 
     f_msg2 = Chat(type=ChatKind.OBSERVATION_VALUE,
                   data=ChatObservationValue(
-                      Position(3, 4), CellKind.BREAD, 55))
+                      Position(3, 4), CellKind.BREAD, 16))
 
     f_msg3 = Chat(type=ChatKind.SINGLE_CELL_KIND,
-                  data=ChatSingleCellKind(CellKind.EXPLORER_DIED))
+                  data=ChatSingleCellKind(CellKind.HELP_ME))
 
     m, sc = encode(
         1337, [f_msg1, f_msg2, f_msg3, f_msg1, f_msg2])
-    print('length of encoded msg:', len(m))
-    ant_id, msgs = decode(m)
-    print('decoded msg:', ant_id, msgs)
+
+    id, e = decode(m)
+
+    print(id, e)
