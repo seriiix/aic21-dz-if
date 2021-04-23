@@ -274,7 +274,9 @@ class Grid():
 
     def get_effective_distance(self, start, location):
         path = self.bfs(start, location)
-        distance = len(path) if path is not None else np.inf
+        if path is None:
+            return np.inf
+        distance = len(path)
         unknown_distance = self.count_unknown_cells(path)
         known_distance = distance - unknown_distance
         effective_distance = known_distance + UNKNOWN_DISTANCE_PENALTY * unknown_distance
