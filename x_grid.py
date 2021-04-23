@@ -286,7 +286,7 @@ class Grid():
     def get_harvest_score(self, start, location):
         effective_distance = self.get_effective_distance(start, location)
         resource_value = self[location].get_resource_score()
-        score = resource_value/effective_distance
+        score = resource_value/(effective_distance**GREEDYNESS_HARVEST_FACTOR)
         return score
 
     def get_harvest_location(self, position: Position) -> Position:
