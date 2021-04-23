@@ -317,7 +317,7 @@ class Env():
         return self.grid.unsafe_zone_seen or self.grid.enemy_base
 
     def update_worker_task(self):
-        if self.game.ant.currentResource and self.game.ant.currentResource.value >= MIN_CARRY_FOR_ANT:
+        if self.game.ant.currentResource is not None and self.game.ant.currentResource.value >= MIN_CARRY_FOR_ANT:
             self.task = Task(type=TaskType.RETURN,
                              destination=self.base_pos)
             return
@@ -459,6 +459,7 @@ class Env():
             elif self.task.type == TaskType.GATHER:
                 # TODO: or waiting until certain time
                 if self.grid[self.position].our_soldiers >= MIN_GATHER_ANTS:
+                    # TODO: Should use deterministic bfs
                     self.attacking_position = self.grid.where_to_attack(
                         self.position)
                     self.task = Task(TaskType.BASE_ATTACK,
