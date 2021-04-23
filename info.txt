@@ -1,1 +1,1 @@
-# bug after 72 move together
+# base pos bug fix and greedier resource gathering
