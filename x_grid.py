@@ -143,7 +143,7 @@ class Grid():
             pos.y = self.height - 1
         return pos
 
-    def bfs(self, start: Position, goal: Position, known: bool = False):
+    def bfs(self, start: Position, goal: Position, known: bool = False, random: bool = True):
         if start == goal:
             return [start]
         visited = np.zeros((self.height, self.width))
@@ -166,7 +166,8 @@ class Grid():
                     neighbours.append((neighbor, path + [current]))
                     visited[neighbor.y][neighbor.x] = 1
 
-            shuffle(neighbours)
+            if random:
+                shuffle(neighbours)
             for n in neighbours:
                 queue.append(n)
 
