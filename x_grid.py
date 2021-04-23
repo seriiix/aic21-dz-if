@@ -59,6 +59,7 @@ class MapCell():
                 elif type == ResourceType.BREAD.value:
                     return self.bread_value
 
+
 class Grid():
     def __init__(self, width, height, base_pos):
         self.width = width
@@ -261,7 +262,7 @@ class Grid():
         for row in self.cells:
             for cell in row:
                 if self.manhattan(position, self.enemy_base) < MAX_ATTACK_DISTANCE_SOLDIER and cell.known:
-                    return 
+                    return
 
         return self.enemy_base
 
@@ -304,14 +305,14 @@ class Grid():
             return None
         else:
             locations = [self[Position(x, y)].position
-                     for x in range(self.width) for y in range(self.height)
-                     if self[Position(x, y)].get_resource_score(type=current_resource.type)]
+                         for x in range(self.width) for y in range(self.height)
+                         if self[Position(x, y)].get_resource_score(type=current_resource.type)]
             weights = [self.get_harvest_score(
-                        position, location) for location in locations]
+                position, location) for location in locations]
             if len(locations):
                 return choices(locations, weights=weights, k=1)[0]
             else:
-                return None        
+                return None
 
     def get_neighbour(self, position, direction):
         if direction == Direction.RIGHT:
@@ -349,7 +350,8 @@ class Grid():
     def get_explore_location(self, start: Position) -> Position:
         locations = self.get_seen_cells_neighbours()
         weights = [1/self.manhattan(start, location) for location in locations]
-        location = choices(locations, weights=weights, k=1)[0] if len(locations) else start
+        location = choices(locations, weights=weights, k=1)[
+            0] if len(locations) else start
         return location
 
     def make_cells_arround_position_known(self, position):

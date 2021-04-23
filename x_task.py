@@ -1,6 +1,7 @@
 from enum import Enum
 from x_helpers import Position
 
+
 class TaskType(Enum):
     EXPLORE = 0
     HARVEST = 1
@@ -22,4 +23,3 @@ class Task:
 
     def __str__(self):
         return f"Task(type={self.type}, dest={self.destination})"
-

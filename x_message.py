@@ -115,7 +115,7 @@ def get_kind_score(kind: CellKind):
         return 6
     if kind == CellKind.ENEMY_BASE:
         return 2000
-    
+
     if kind == CellKind.WANT_TO_DEFEND:
         return 10
     if kind == CellKind.WANT_TO_HARVEST:
