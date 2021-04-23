@@ -1,1 +1,1 @@
-# possible fix for wrong enemy base position
+# bug after 72 move together
