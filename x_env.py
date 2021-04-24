@@ -425,13 +425,12 @@ class Env():
             self.task = Task(TaskType.BASE_ATTACK,
                              destination=self.attacking_position)
 
-        elif self.get_last_turn_number() > FORCE_ATTACK_TURN:
+        elif self.get_last_turn_number() > FORCE_ATTACK_TURN and not self.gathering_position:
             if self.grid.enemy_base:
                 self.gathering_position = self.grid.get_gathering_position(
                             self.grid.enemy_base)
                 self.task = Task(TaskType.GATHER, destination=self.gathering_position)
             else:
-                cv.GATHERING_PORTION = 1.3
                 self.gathering_position = self.base_pos
                 self.task = Task(
                     TaskType.GATHER, destination=self.base_pos)
@@ -472,6 +471,7 @@ class Env():
                         seed(self.get_last_turn_number())
                         destination = self.grid.get_explore_location(self.position)
                         self.task = Task(TaskType.EXPLORE, destination=destination)
+                        self.gathering_position = None
                 return
             elif self.task.type == TaskType.DEFEND:
                 if self.damage_position:
