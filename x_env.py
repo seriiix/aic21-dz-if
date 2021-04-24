@@ -464,11 +464,11 @@ class Env():
                         self.position)
                     self.task = Task(TaskType.BASE_ATTACK,
                                      destination=self.attacking_position)
-                    self.messages.append(Chat(
-                        type=ChatKind.OBSERVATION_SIMPLE,
-                        data=ChatObservationSimple(
-                            self.task.destination, CellKind.LETS_FUCK_THIS_SHIT)
-                    ))
+                    # self.messages.append(Chat(
+                    #     type=ChatKind.OBSERVATION_SIMPLE,
+                    #     data=ChatObservationSimple(
+                    #         self.task.destination, CellKind.LETS_FUCK_THIS_SHIT)
+                    # ))
                 return
             elif self.task.type == TaskType.DEFEND:
                 if self.damage_position:
