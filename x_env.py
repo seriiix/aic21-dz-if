@@ -1,9 +1,10 @@
 from typing import List
 from enum import Enum
-from random import randint, choice
+from random import randint, choice, seed
 from copy import deepcopy
 import numpy as np
 
+import x_consts as cv
 from Model import Ant, Direction, Game, Resource, ResourceType, CellType, AntType, AntTeam
 from x_consts import *
 from x_helpers import Position
@@ -33,6 +34,7 @@ class Env():
         self.attacking_position = None
         # when defending and enemy is trying to attack - > sets in handle message on HELP_ME
         self.damage_position = None
+        self.gathering_turn_number = None
 
     def init_grid(self, game):
         self.game = game
@@ -423,13 +425,16 @@ class Env():
             self.task = Task(TaskType.BASE_ATTACK,
                              destination=self.attacking_position)
 
-        elif self.get_last_turn_number() > 72:
+        elif self.get_last_turn_number() > FORCE_ATTACK_TURN:
             if self.grid.enemy_base:
-                self.task = Task(
-                    TaskType.BASE_ATTACK, destination=self.grid.enemy_base)
+                self.gathering_position = self.grid.get_gathering_position(
+                            self.grid.enemy_base)
+                self.task = Task(TaskType.GATHER, destination=self.gathering_position)
             else:
+                cv.GATHERING_PORTION = 1.3
+                self.gathering_position = self.base_pos
                 self.task = Task(
-                    TaskType.EXPLORE, destination=self.grid.get_explore_location(self.position))
+                    TaskType.GATHER, destination=self.base_pos)
 
         elif self.gathering_position:
             self.task = Task(
@@ -457,18 +462,16 @@ class Env():
             if self.task.type == TaskType.BASE_ATTACK:
                 return
             elif self.task.type == TaskType.GATHER:
-                # TODO: or waiting until certain time
                 if self.grid[self.position].our_soldiers >= MIN_GATHER_ANTS:
-                    # TODO: Should use deterministic bfs
-                    self.attacking_position = self.grid.where_to_attack(
-                        self.position)
-                    self.task = Task(TaskType.BASE_ATTACK,
-                                     destination=self.attacking_position)
-                    # self.messages.append(Chat(
-                    #     type=ChatKind.OBSERVATION_SIMPLE,
-                    #     data=ChatObservationSimple(
-                    #         self.task.destination, CellKind.LETS_FUCK_THIS_SHIT)
-                    # ))
+                    if self.grid.enemy_base:
+                        self.attacking_position = self.grid.where_to_attack(
+                            self.position)
+                        self.task = Task(TaskType.BASE_ATTACK,
+                                        destination=self.attacking_position)
+                    else:
+                        seed(self.get_last_turn_number())
+                        destination = self.grid.get_explore_location(self.position)
+                        self.task = Task(TaskType.EXPLORE, destination=destination)
                 return
             elif self.task.type == TaskType.DEFEND:
                 if self.damage_position:

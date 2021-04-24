@@ -5,6 +5,7 @@ from collections import deque
 from typing import List
 import numpy as np
 
+import x_consts as cv
 from Model import Ant, Direction, Game, Map, Resource, ResourceType, CellType, AntType, AntTeam
 from x_consts import *
 from x_helpers import Position
@@ -349,7 +350,7 @@ class Grid():
     def get_gathering_position(self, position):
         # TODO: better option you shoud get optimal value by knowing soldier distances
         path = self.bfs(self.base_pos, position, known=True)
-        return path[len(path)//GATHERING_PORTION]
+        return path[int(len(path)/cv.GATHERING_PORTION)]
 
     def get_explore_location(self, start: Position) -> Position:
         locations = self.get_seen_cells_neighbours()
