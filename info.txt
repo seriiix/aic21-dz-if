@@ -1,1 +1,1 @@
-# soldiers should move in group when attacking
+# each time gather
