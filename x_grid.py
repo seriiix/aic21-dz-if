@@ -18,6 +18,8 @@ class MapCell():
         self.known: bool = False  # seen at least one time
         self.invalid: bool = False  # برای جاهایی که اصلا غیر ممکنه مورچه بره اونجا ها
         self.wall: bool = False
+        self.swamp: bool = False
+        self.trap: bool = False
         self.last_seen: int = -np.inf  # How many turns passed since we see the resource
 
         self.grass_value: int = 0

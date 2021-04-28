@@ -74,6 +74,10 @@ class Env():
                 if msg.type == ChatKind.OBSERVATION_SIMPLE:
                     if msg.data.cell_kind == CellKind.WALL:
                         self.grid[cell_pos].wall = True
+                    elif msg.data.cell_kind == CellKind.SWAMP:
+                        self.grid[cell_pos].swamp = True
+                    elif msg.data.cell_kind == CellKind.TRAP:
+                        self.grid[cell_pos].trap = True
                     elif msg.data.cell_kind == CellKind.INVALID:
                         self.grid[cell_pos].invalid = True
                     elif msg.data.cell_kind == CellKind.ENEMY_BASE:
@@ -128,6 +132,10 @@ class Env():
                 if msg.type == ChatKind.OBSERVATION_SIMPLE:
                     if msg.data.cell_kind == CellKind.WALL:
                         self.grid[cell_pos].wall = True
+                    elif msg.data.cell_kind == CellKind.SWAMP:
+                        self.grid[cell_pos].swamp = True
+                    elif msg.data.cell_kind == CellKind.TRAP:
+                        self.grid[cell_pos].trap = True
                     elif msg.data.cell_kind == CellKind.INVALID:
                         self.grid[cell_pos].invalid = True
                     elif msg.data.cell_kind == CellKind.ENEMY_BASE:
@@ -175,7 +183,6 @@ class Env():
                     # TODO: add ant's position to messages?
 
                     self.grid[cell_pos].last_seen = 0
-
                     self.grid[cell_pos].known = True
 
                     # WALL
@@ -190,6 +197,34 @@ class Env():
                             self.messages.append(new_message)
                     else:
                         self.grid[cell_pos].wall = False
+
+                    # SWAMP
+                    if cell.type == CellType.SWAMP.value:
+                        if not self.grid[cell_pos].swamp:
+                            self.grid[cell_pos].swamp = True
+                            new_message = Chat(
+                                type=ChatKind.OBSERVATION_SIMPLE,
+                                data=ChatObservationSimple(
+                                    cell_pos, CellKind.SWAMP
+                                )
+                            )
+                            self.messages.append(new_message)
+                    else:
+                        self.grid[cell_pos].swamp = False
+
+                    # TRAP
+                    if cell.type == CellType.TRAP.value:
+                        if not self.grid[cell_pos].trap:
+                            self.grid[cell_pos].trap = True
+                            new_message = Chat(
+                                type=ChatKind.OBSERVATION_SIMPLE,
+                                data=ChatObservationSimple(
+                                    cell_pos, CellKind.TRAP
+                                )
+                            )
+                            self.messages.append(new_message)
+                    else:
+                        self.grid[cell_pos].trap = False
 
                     # RESOURCES
                     if cell.resource_type == ResourceType.BREAD.value:
@@ -428,8 +463,9 @@ class Env():
         elif self.get_last_turn_number() > FORCE_ATTACK_TURN and not self.gathering_position:
             if self.grid.enemy_base:
                 self.gathering_position = self.grid.get_gathering_position(
-                            self.grid.enemy_base)
-                self.task = Task(TaskType.GATHER, destination=self.gathering_position)
+                    self.grid.enemy_base)
+                self.task = Task(
+                    TaskType.GATHER, destination=self.gathering_position)
             else:
                 self.gathering_position = self.base_pos
                 self.task = Task(
@@ -466,11 +502,13 @@ class Env():
                         self.attacking_position = self.grid.where_to_attack(
                             self.position)
                         self.task = Task(TaskType.BASE_ATTACK,
-                                        destination=self.attacking_position)
+                                         destination=self.attacking_position)
                     else:
                         seed(self.get_last_turn_number())
-                        destination = self.grid.get_explore_location(self.position)
-                        self.task = Task(TaskType.EXPLORE, destination=destination)
+                        destination = self.grid.get_explore_location(
+                            self.position)
+                        self.task = Task(TaskType.EXPLORE,
+                                         destination=destination)
                         self.gathering_position = None
                 return
             elif self.task.type == TaskType.DEFEND:
@@ -514,7 +552,7 @@ class Env():
     def get_direction(self):
         if not self.task:
             return Direction.CENTER
-        
+
         direction = self.grid.get_direction(
             self.position, self.task.destination, task=self.task)
 
