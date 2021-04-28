@@ -17,7 +17,8 @@ MESSAGE_LENGTH = 32
 CHAR_BITS = 8
 #
 ANT_ID_BITS = 12
-CHAT_KIND_BITS = 3
+CHAT_KIND_BITS = 2
+CELL_KIND_BITS = 5
 
 # hashes
 hash_index = 0
@@ -32,11 +33,11 @@ for i in range(35):
 
 
 class ChatKind(Enum):
-    OBSERVATION_SIMPLE = '000'  # [position + kind]
-    OBSERVATION_VALUE = '001'  # [position + kind + value]
-    SINGLE_CELL_KIND = '010'  # [kind]
+    OBSERVATION_VALUE = '00'  # [position + kind + value]
+    OBSERVATION_SIMPLE = '01'  # [position + kind]
+    SINGLE_CELL_KIND = '10'  # [kind]
 
-    END = '111'
+    END = '11'  # not needed
 
 
 class CellKind(Enum):
@@ -44,27 +45,24 @@ class CellKind(Enum):
     GRASS = 1
     BREAD = 2
     INVALID = 3
-    # if need more set CELL_KIND_BITS(s) to 3
+    SWAMP = 4
+    TRAP = 5
 
-    ENEMY_BASE = 4
-    ME_WORKER = 5
-    ME_SOLDIER = 6
+    ENEMY_BASE = 6
+    ME_WORKER = 7
+    ME_SOLDIER = 8
 
-    WANT_TO_DEFEND = 7
-    WANT_TO_HARVEST = 8
-    # if need more set CELL_KIND_BITS(s) to 4
-    WANT_TO_GATHER = 9
-    WANT_TO_EXPLORE = 10
+    WANT_TO_DEFEND = 9
+    WANT_TO_HARVEST = 10
+    WANT_TO_GATHER = 11
+    WANT_TO_EXPLORE = 12
 
     # NO POSITION NEEDED
-    # ONLY IF DAMAGED
-    SOLDIER_BORN = 11
-    EXPLORER_DIED = 12
-    HELP_ME = 13
-    LETS_FUCK_THIS_SHIT = 14
-    ME_EXPLORER = 15
-
-    # if need more set CELL_KIND_BITS(s) to 5
+    SOLDIER_BORN = 13
+    EXPLORER_DIED = 14
+    HELP_ME = 15
+    LETS_FUCK_THIS_SHIT = 16
+    ME_EXPLORER = 17
 
     @staticmethod
     def get_value(kind: int):
@@ -77,24 +75,32 @@ class CellKind(Enum):
         if kind == 3:
             return CellKind.INVALID
         if kind == 4:
-            return CellKind.ENEMY_BASE
+            return CellKind.SWAMP
         if kind == 5:
-            return CellKind.ME_WORKER
+            return CellKind.TRAP
         if kind == 6:
-            return CellKind.ME_SOLDIER
+            return CellKind.ENEMY_BASE
         if kind == 7:
-            return CellKind.WANT_TO_DEFEND
+            return CellKind.ME_WORKER
         if kind == 8:
-            return CellKind.WANT_TO_HARVEST
+            return CellKind.ME_SOLDIER
         if kind == 9:
-            return CellKind.WANT_TO_GATHER
+            return CellKind.WANT_TO_DEFEND
         if kind == 10:
+            return CellKind.WANT_TO_HARVEST
+        if kind == 11:
+            return CellKind.WANT_TO_GATHER
+        if kind == 12:
             return CellKind.WANT_TO_EXPLORE
         if kind == 13:
-            return CellKind.HELP_ME
+            return CellKind.SOLDIER_BORN
         if kind == 14:
-            return CellKind.LETS_FUCK_THIS_SHIT
+            return CellKind.EXPLORER_DIED
         if kind == 15:
+            return CellKind.HELP_ME
+        if kind == 16:
+            return CellKind.LETS_FUCK_THIS_SHIT
+        if kind == 17:
             return CellKind.ME_EXPLORER
 
         return None
@@ -109,6 +115,10 @@ def get_kind_score(kind: CellKind):
         return 5
     if kind == CellKind.INVALID:
         return 100
+    if kind == CellKind.SWAMP:
+        return 10
+    if kind == CellKind.TRAP:
+        return 10
     if kind == CellKind.ME_WORKER:
         return 3
     if kind == CellKind.ME_SOLDIER:
@@ -156,7 +166,7 @@ class ChatObservationSimple():
 
         # CONSTS
         self.POSITION_BITS = 15
-        self.CELL_KIND_BITS = 4
+        self.CELL_KIND_BITS = CELL_KIND_BITS
         self.MESSAGE_BITS = self.POSITION_BITS + self.CELL_KIND_BITS
 
     def get_score(self) -> int:
@@ -179,7 +189,7 @@ class ChatObservationValue():
 
         # CONSTS
         self.POSITION_BITS = 15
-        self.CELL_KIND_BITS = 4
+        self.CELL_KIND_BITS = CELL_KIND_BITS
         self.VALUE_BITS = 10
         self.MESSAGE_BITS = self.POSITION_BITS + self.CELL_KIND_BITS + self.VALUE_BITS
 
@@ -200,7 +210,7 @@ class ChatSingleCellKind():
         self.get_score()
 
         # CONSTS
-        self.CELL_KIND_BITS = 4
+        self.CELL_KIND_BITS = CELL_KIND_BITS
         self.MESSAGE_BITS = self.CELL_KIND_BITS
 
     def get_score(self) -> int:
@@ -358,7 +368,7 @@ def decode(msg: str):
 if __name__ == '__main__':
     f_msg1 = Chat(type=ChatKind.OBSERVATION_SIMPLE,
                   data=ChatObservationSimple(
-                      Position(15, 12), CellKind.ENEMY_BASE))
+                      Position(15, 12), CellKind.ME_EXPLORER))
 
     f_msg2 = Chat(type=ChatKind.OBSERVATION_VALUE,
                   data=ChatObservationValue(
