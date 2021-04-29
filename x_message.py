@@ -68,7 +68,7 @@ class CellKind(Enum):
     SOLDIER_DIED = 21
     DEFENDER_DIED = 22
 
-    INVALID_FOR_WORKER = 22
+    INVALID_FOR_WORKER = 23
 
     @staticmethod
     def get_value(kind: int):
@@ -116,7 +116,7 @@ class CellKind(Enum):
             return CellKind.SOLDIER_DIED
         if kind == 22:
             return CellKind.INVALID_FOR_WORKER
-        if kind == 23: 
+        if kind == 23:
             return CellKind.DEFENDER_DIED
         return None
 
@@ -158,7 +158,7 @@ def get_kind_score(kind: CellKind):
         return 3000
     if kind == CellKind.ME_EXPLORER:
         return 100
-    
+
     if kind == CellKind.WORKER_BORN:
         return 250
     if kind == CellKind.WORKER_DIED:
