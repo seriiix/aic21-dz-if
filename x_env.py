@@ -119,8 +119,8 @@ class Env():
                     elif msg.data.cell_kind == CellKind.WORKER_DIED:
                         self.workers -= 1
                     elif msg.data.cell_kind == CellKind.INVALID_FOR_WORKER:
-                            if self.game.ant.antType == AntType.KARGAR.value:
-                                self.grid[cell_pos].invalid = True
+                        if self.game.ant.antType == AntType.KARGAR.value:
+                            self.grid[cell_pos].invalid = True
                     elif msg.data.cell_kind == CellKind.EXPLORER_DIED:
                         self.explorers -= 1
                     elif msg.data.cell_kind == CellKind.DEFENDER_DIED:
@@ -179,11 +179,14 @@ class Env():
                         elif msg.data.cell_kind == CellKind.LETS_FUCK_THIS_SHIT:
                             self.attacking_position = cell_pos
                         elif msg.data.cell_kind == CellKind.ME_SOLDIER:
-                            self.grid.make_cells_arround_position_known(cell_pos)
+                            self.grid.make_cells_arround_position_known(
+                                cell_pos)
                         elif msg.data.cell_kind == CellKind.ME_WORKER:
-                            self.grid.make_cells_arround_position_known(cell_pos)
+                            self.grid.make_cells_arround_position_known(
+                                cell_pos)
                         elif msg.data.cell_kind == CellKind.ME_EXPLORER:
-                            self.grid.make_cells_arround_position_known(cell_pos)
+                            self.grid.make_cells_arround_position_known(
+                                cell_pos)
                         elif msg.data.cell_kind == CellKind.SOLDIER_BORN:
                             self.soldiers += 1
                         elif msg.data.cell_kind == CellKind.SOLDIER_DIED:
@@ -701,11 +704,15 @@ class Env():
                         self.task.destination, CellKind.INVALID_FOR_WORKER)
                 ))
                 direction = Direction.CENTER
+        else:
+            if self.task.type != TaskType.RETURN:
+                direction = self.grid.get_direction(
+                    self.position, self.task.destination, task=self.task, trap=False)
         return direction
 
     def get_direction_soldier(self):
         if not self.task:
-                return Direction.CENTER
+            return Direction.CENTER
 
         direction = self.grid.get_direction(
             self.position, self.task.destination, task=self.task)
@@ -737,7 +744,7 @@ class Env():
             return self.get_direction_worker()
         if self.game.ant.antType == AntType.SARBAAZ.value:
             return self.get_direction_soldier()
-        
+
     def get_self_type_message(self):
         if self.game.ant.antType == AntType.KARGAR.value:
             return Chat(
