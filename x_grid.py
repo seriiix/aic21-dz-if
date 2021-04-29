@@ -4,6 +4,7 @@ from copy import deepcopy
 from collections import deque
 from typing import List
 import numpy as np
+import heapq
 
 import x_consts as cv
 from Model import Ant, Direction, Game, Map, Resource, ResourceType, CellType, AntType, AntTeam
@@ -80,6 +81,24 @@ class Grid():
 
     def __setitem__(self, position: Position, value: MapCell):
         self.cells[position.y][position.x] = deepcopy(value)
+
+    def __str__(self) -> str:
+        s = ''
+
+        for j in range(self.height):
+            for i in range(self.width):
+                if self[Position(i, j)].wall:
+                    s += '#'
+                elif self[Position(i, j)].swamp:
+                    s += 'S'
+                elif self[Position(i, j)].trap:
+                    s += 'T'
+                else:
+                    s += '-'
+            if j != self.height - 1:
+                s += '\n'
+
+        return s
 
     def manhattan(self, p1: Position, p2: Position):
         x1 = min(p1.x, p2.x)
@@ -173,6 +192,76 @@ class Grid():
                 shuffle(neighbours)
             for n in neighbours:
                 queue.append(n)
+
+        return None
+
+    def a_star_get_path(self, current_pos: Position):
+        path = []
+        current = current_pos
+        while current is not None:
+            path.append(current)
+            current = current.parent
+        return path[::-1]  # Return reversed path
+
+    def a_star(self, start: Position, goal: Position, known: bool = False, random: bool = True, trap: bool = False):
+        open_list = []
+        visited = np.zeros((self.height, self.width))
+
+        heapq.heapify(open_list)
+        heapq.heappush(open_list, start)
+
+        while len(open_list) > 0:
+            current: Position = heapq.heappop(open_list)
+            visited[current.y][current.x] = True
+
+            if current == goal:
+                return self.a_star_get_path(current)
+
+            neighbours = []
+
+            for k in range(4):
+                x_ = dx[k] + current.x
+                y_ = dy[k] + current.y
+                neighbor = self.fix_pos(Position(x_, y_))
+
+                if self[neighbor].wall:
+                    continue
+                if trap and self[neighbor].trap:
+                    continue
+                if known and not self[neighbor].known:
+                    continue
+
+                neighbor.parent = current
+                neighbours.append(neighbor)
+
+            for n in neighbours:
+                if visited[n.y][n.x] == True:
+                    continue
+
+                if self[n].swamp:
+                    n.g = current.g + 4  # cause we're stuck for 3 turns
+                else:
+                    n.g = current.g + 1
+                n.h = self.manhattan(n, goal)
+                n.f = n.g + n.h
+
+                index = None
+                for i in range(0, len(open_list)):
+                    if n == open_list[i]:
+                        index = i
+                        break
+
+                if index:
+                    if n.g >= open_list[index].g:
+                        continue
+                    else:
+                        open_list[index] = open_list[-1]
+                        open_list.pop()
+                        if index < len(open_list):
+                            heapq._siftup(open_list, index)
+                            heapq._siftdown(open_list, 0, index)
+
+                heapq.heappush(open_list, n)
 
         return None
 
@@ -366,3 +455,52 @@ class Grid():
             for cell in row:
                 if self.manhattan(position, cell.position) <= MAX_AGENT_VIEW_DISTANCE:
                     cell.known = True
+
+
+# tests
+if __name__ == '__main__':
+    print('Test #1')
+
+    g1 = Grid(10, 5, Position(0, 0))
+    g1[Position(3, 1)].wall = True
+    g1[Position(5, 1)].wall = True
+    g1[Position(4, 0)].wall = True
+    g1[Position(4, 2)].wall = True
+
+    path = g1.a_star(Position(4, 1), Position(3, 0))
+    print(g1)
+    print('> Results (Must be None):', path)
+
+    print('\nTest #2')
+    g1[Position(5, 1)].wall = False
+
+    path = g1.a_star(Position(4, 1), Position(3, 0))
+    print(g1)
+    print('> Results:', path)
+
+    print('\nTest #3')
+    g1[Position(5, 0)].swamp = True
+
+    path = g1.a_star(Position(4, 1), Position(3, 0))
+    print(g1)
+    print('> Results:', path)
+
+    print('\nTime test')
+
+    import timeit
+
+    start_bfs = timeit.default_timer()
+    for i in range(200):
+        g = Grid(35, 35, Position(0, 0))
+        path = g.bfs(Position(0, 0), Position(17, 17))
+
+    stop_bfs = timeit.default_timer()
+    print('BFS Time: ', stop_bfs - start_bfs, len(path))
+
+    start_astar = timeit.default_timer()
+    for i in range(200):
+        g = Grid(35, 35, Position(0, 0))
+        path = g.a_star(Position(0, 0), Position(17, 17))
+
+    stop_astar = timeit.default_timer()
+    print('A* Time: ', stop_astar - start_astar, len(path))
