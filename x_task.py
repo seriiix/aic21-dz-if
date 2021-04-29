@@ -13,7 +13,7 @@ class TaskType(Enum):
     DEFEND = 6
     GATHER = 7
     STAND_ATTACK = 8
-    DEVIATE = 9 # سربازا از هم فاصله میگیرن
+    DEVIATE = 9  # سربازا از هم فاصله میگیرن
     EXPLORE_FOR_ATTACK = 10
 
 
