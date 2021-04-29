@@ -468,7 +468,7 @@ class Grid():
         locations = []
         for row in self.cells:
             for cell in row:
-                if self.manhattan(position, cell.position) <= MAX_DEVIATION_RADIUS and self.self.manhattan(self.enemy_base, cell.position) == STAND_RADIUS_FROM_ENEMY_BASE:
+                if self.manhattan(position, cell.position) <= MAX_DEVIATION_RADIUS and self.manhattan(self.enemy_base, cell.position) == STAND_RADIUS_FROM_ENEMY_BASE:
                     locations.append(cell.position)
         return choice(locations)
 

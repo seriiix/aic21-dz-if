@@ -685,26 +685,27 @@ class Env():
 
         if direction is None:
             self.grid[self.task.destination].invalid = True
-            self.task = None
-            self.update_task()
             self.messages.append(Chat(
                 type=ChatKind.OBSERVATION_SIMPLE,
                 data=ChatObservationSimple(
                     self.task.destination, CellKind.INVALID_FOR_WORKER)
             ))
+            self.task = None
+            self.update_task()
             direction = self.grid.get_direction(
                 self.position, self.task.destination, task=self.task, trap=True)
+
             if direction is None:
                 self.grid[self.task.destination].invalid = True
-                self.task = None
                 self.messages.append(Chat(
                     type=ChatKind.OBSERVATION_SIMPLE,
                     data=ChatObservationSimple(
                         self.task.destination, CellKind.INVALID_FOR_WORKER)
                 ))
+                self.task = None
                 direction = Direction.CENTER
         else:
-            if self.task.type != TaskType.RETURN:
+            if not (self.task.type == TaskType.RETURN):
                 direction = self.grid.get_direction(
                     self.position, self.task.destination, task=self.task, trap=False)
         return direction
@@ -718,23 +719,25 @@ class Env():
 
         if direction is None:
             self.grid[self.task.destination].invalid = True
-            self.task = None
-            self.update_task()
             self.messages.append(Chat(
                 type=ChatKind.OBSERVATION_SIMPLE,
                 data=ChatObservationSimple(
                     self.task.destination, CellKind.INVALID)
             ))
+            self.task = None
+            self.update_task()
+
             direction = self.grid.get_direction(
                 self.position, self.task.destination, task=self.task)
+
             if direction is None:
                 self.grid[self.task.destination].invalid = True
-                self.task = None
                 self.messages.append(Chat(
                     type=ChatKind.OBSERVATION_SIMPLE,
                     data=ChatObservationSimple(
                         self.task.destination, CellKind.INVALID)
                 ))
+                self.task = None
                 direction = Direction.CENTER
         return direction
 

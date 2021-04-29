@@ -388,10 +388,13 @@ def parser(bin):
 
 def decode(msg: str):
     "decode a message into multi-message format"
-    s = ''
-    for m in msg:
-        s += to_bin_with_fixed_length(ord(m), CHAR_BITS)
-    return parser(s)
+    try:
+        s = ''
+        for m in msg:
+            s += to_bin_with_fixed_length(ord(m), CHAR_BITS)
+        return parser(s)
+    except Exception:
+        return 0, []
 
 
 # tests
