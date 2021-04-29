@@ -66,9 +66,8 @@ class CellKind(Enum):
     WORKER_DIED = 19
     SOLDIER_BORN = 20
     SOLDIER_DIED = 21
-    DEFENDER_DIED = 22
-
-    INVALID_FOR_WORKER = 23
+    INVALID_FOR_WORKER = 22
+    DEFENDER_DIED = 23
 
     @staticmethod
     def get_value(kind: int):
