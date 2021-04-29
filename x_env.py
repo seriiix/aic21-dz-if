@@ -569,12 +569,12 @@ class Env():
                 ))
         else:
             # شرطهای تغییر حالتها بدون چون و چرا!!!
-            
+
             if self.gathering_position:
                 self.task = Task(
                     TaskType.GATHER, destination=self.gathering_position)
                 self.gathering_position = None
-            
+
             # elif self.get_last_turn_number() > FORCE_ATTACK_TURN and not self.gathering_position:
             #     if self.grid.enemy_base:
             #         self.gathering_position = self.grid.get_gathering_position(
@@ -604,10 +604,11 @@ class Env():
                 return
             elif self.task.type == TaskType.STAND_ATTACK:
                 if self.position == self.task.destination:
-                    seed(self.game.ant_id)
-                    self.deviation_position = self.grid.get_deviation_position(self.position)
+                    seed(self.ant_id)
+                    self.deviation_position = self.grid.get_deviation_position(
+                        self.position)
                     self.task = Task(TaskType.DEVIATE,
-                            destination=self.deviation_position)
+                                     destination=self.deviation_position)
                     self.waiting_for_deviate = 0
                 else:
                     return
@@ -616,10 +617,10 @@ class Env():
                     self.task = Task(
                         TaskType.BASE_ATTACK, destination=self.grid.enemy_base
                     )
-                    return 
+                    return
                 else:
                     self.waiting_for_deviate += 1
-                    return 
+                    return
             elif self.task.type == TaskType.BASE_ATTACK:
                 return
 
@@ -633,9 +634,9 @@ class Env():
                         return
                 else:
                     self.attacking_position = self.grid.where_to_stand(
-                            self.position)
+                        self.position)
                     self.task = Task(TaskType.STAND_ATTACK,
-                        destination=self.attacking_position)
+                                     destination=self.attacking_position)
 
             elif self.task.type == TaskType.KILL:
                 if self.grid.is_enemy_in_sight():
@@ -661,7 +662,6 @@ class Env():
                 else:
                     self.task.destination = self.grid.get_explore_location(
                         self.position)
-
 
     def update_task(self):
         "analyzes the map and trys to get the most important task"
