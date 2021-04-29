@@ -479,8 +479,9 @@ class Grid():
                 if self.manhattan(cell.position, self.enemy_base) <= MAX_ATTACK_DISTANCE_SOLDIER:
                     locations.append(cell.position)
         paths = [self.a_star(position, location) for location in locations]
-        distances = [len(path) for path in paths if path else np.inf]
+        distances = [len(path) if path else np.inf for path in paths]
         return locations[distances.index(min(distances))]
+
 
 # tests
 if __name__ == '__main__':
