@@ -277,7 +277,7 @@ class Grid():
         if task and task.type == TaskType.BASE_ATTACK:
             random = False
         # path = self.bfs(start, goal, random=random)
-        if task == TaskType.RETURN:
+        if task and task.type == TaskType.RETURN:
             path = self.a_star(start, goal, trap=True)
         else:
             path = self.a_star(start, goal, trap=False)
