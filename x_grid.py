@@ -272,15 +272,12 @@ class Grid():
                 cntr += 1
         return cntr
 
-    def get_direction(self, start: Position, goal: Position, task=None):
+    def get_direction(self, start: Position, goal: Position, task=None, trap=False):
         random = True
         if task and task.type == TaskType.BASE_ATTACK:
             random = False
         # path = self.bfs(start, goal, random=random)
-        if task and task.type == TaskType.RETURN:
-            path = self.a_star(start, goal, trap=True)
-        else:
-            path = self.a_star(start, goal, trap=False)
+        path = self.a_star(start, goal, trap=trap)
         if path is None:
             self[goal].invalid = True
             return None

@@ -28,6 +28,7 @@ class Env():
         self.workers = 0
         self.saw_new_resource = False
         self.is_explorer = False
+        self.is_defender = False
         self.gathering_position = None
         self.previous_position: Position = None
         # when we are gathered and we want to attack - > sets in handle message on LETS_FUCK
@@ -35,6 +36,8 @@ class Env():
         # when defending and enemy is trying to attack - > sets in handle message on HELP_ME
         self.damage_position = None
         self.gathering_turn_number = None
+        self.previous_health = -1
+        self.died = False
 
     def init_grid(self, game):
         self.game = game
@@ -106,6 +109,21 @@ class Env():
                     elif msg.data.cell_kind == CellKind.ME_EXPLORER:
                         # print("reveded EXPLORER")
                         self.grid.make_cells_arround_position_known(cell_pos)
+                    elif msg.data.cell_kind == CellKind.SOLDIER_BORN:
+                        self.soldiers += 1
+                    elif msg.data.cell_kind == CellKind.SOLDIER_DIED:
+                        self.soldiers -= 1
+                    elif msg.data.cell_kind == CellKind.WORKER_BORN:
+                        self.workers += 1
+                    elif msg.data.cell_kind == CellKind.WORKER_DIED:
+                        self.workers -= 1
+                    elif msg.data.cell_kind == CellKind.INVALID_FOR_WORKER:
+                            if self.game.ant.antType == AntType.KARGAR.value:
+                                self.grid[cell_pos].invalid = True
+                    elif msg.data.cell_kind == CellKind.EXPLORER_DIED:
+                        self.explorers -= 1
+                    elif msg.data.cell_kind == CellKind.DEFENDER_DIED:
+                        self.defenders -= 1
 
                 elif msg.type == ChatKind.OBSERVATION_VALUE:
                     self.grid[cell_pos].wall = False
@@ -121,57 +139,74 @@ class Env():
                         self.grid[cell_pos].grass_value = msg.data.value
 
     def get_data_from_old_messages(self):
+        last_turn_number = self.get_last_turn_number()
         for chat in self.game.chatBox.allChats:
-            ant_id, msgs = decode(chat.text)
-            for msg in msgs:
-                cell_pos = msg.data.position
-                self.grid[cell_pos].last_seen = - \
-                    (self.get_last_turn_number()+1 - chat.turn)
-                self.grid[cell_pos].known = True
-                self.grid[cell_pos].safe = True
-                if msg.type == ChatKind.OBSERVATION_SIMPLE:
-                    if msg.data.cell_kind == CellKind.WALL:
-                        self.grid[cell_pos].wall = True
-                    elif msg.data.cell_kind == CellKind.SWAMP:
-                        self.grid[cell_pos].swamp = True
-                    elif msg.data.cell_kind == CellKind.TRAP:
-                        self.grid[cell_pos].trap = True
-                    elif msg.data.cell_kind == CellKind.INVALID:
-                        self.grid[cell_pos].invalid = True
-                    elif msg.data.cell_kind == CellKind.ENEMY_BASE:
-                        self.grid[cell_pos].safe = False
-                        self.grid[cell_pos].enemy_base = True
-                        self.grid.enemy_base = cell_pos
-                    elif msg.data.cell_kind == CellKind.WANT_TO_DEFEND:
-                        self.grid[cell_pos].want_to_defenders += 1
-                        self.defenders += 1
-                    elif msg.data.cell_kind == CellKind.WANT_TO_EXPLORE:
-                        self.explorers += 1
-                    elif msg.data.cell_kind == CellKind.SOLDIER_BORN:
-                        self.soldiers += 1
-                    # elif msg.data.cell_kind == CellKind.WORKER_BORN:
-                        # self.workers += 1
-                    elif msg.data.cell_kind == CellKind.HELP_ME:
-                        self.damage_position = cell_pos
-                    elif msg.data.cell_kind == CellKind.WANT_TO_GATHER:
-                        self.gathering_position = cell_pos
-                    elif msg.data.cell_kind == CellKind.LETS_FUCK_THIS_SHIT:
-                        self.attacking_position = cell_pos
-                    elif msg.data.cell_kind == CellKind.ME_SOLDIER:
-                        self.grid.make_cells_arround_position_known(cell_pos)
-                    elif msg.data.cell_kind == CellKind.ME_WORKER:
-                        self.grid.make_cells_arround_position_known(cell_pos)
-                    elif msg.data.cell_kind == CellKind.ME_EXPLORER:
-                        self.grid.make_cells_arround_position_known(cell_pos)
+            if chat.turn != last_turn_number:
+                ant_id, msgs = decode(chat.text)
+                for msg in msgs:
+                    cell_pos = msg.data.position
+                    self.grid[cell_pos].last_seen = - \
+                        (self.get_last_turn_number()+1 - chat.turn)
+                    self.grid[cell_pos].known = True
+                    self.grid[cell_pos].safe = True
+                    if msg.type == ChatKind.OBSERVATION_SIMPLE:
+                        if msg.data.cell_kind == CellKind.WALL:
+                            self.grid[cell_pos].wall = True
+                        elif msg.data.cell_kind == CellKind.SWAMP:
+                            self.grid[cell_pos].swamp = True
+                        elif msg.data.cell_kind == CellKind.TRAP:
+                            self.grid[cell_pos].trap = True
+                        elif msg.data.cell_kind == CellKind.INVALID:
+                            self.grid[cell_pos].invalid = True
+                        elif msg.data.cell_kind == CellKind.ENEMY_BASE:
+                            self.grid[cell_pos].safe = False
+                            self.grid[cell_pos].enemy_base = True
+                            self.grid.enemy_base = cell_pos
+                        elif msg.data.cell_kind == CellKind.WANT_TO_DEFEND:
+                            self.grid[cell_pos].want_to_defenders += 1
+                            self.defenders += 1
+                        elif msg.data.cell_kind == CellKind.WANT_TO_EXPLORE:
+                            self.explorers += 1
+                        elif msg.data.cell_kind == CellKind.SOLDIER_BORN:
+                            self.soldiers += 1
+                        # elif msg.data.cell_kind == CellKind.WORKER_BORN:
+                            # self.workers += 1
+                        elif msg.data.cell_kind == CellKind.HELP_ME:
+                            self.damage_position = cell_pos
+                        elif msg.data.cell_kind == CellKind.WANT_TO_GATHER:
+                            self.gathering_position = cell_pos
+                        elif msg.data.cell_kind == CellKind.LETS_FUCK_THIS_SHIT:
+                            self.attacking_position = cell_pos
+                        elif msg.data.cell_kind == CellKind.ME_SOLDIER:
+                            self.grid.make_cells_arround_position_known(cell_pos)
+                        elif msg.data.cell_kind == CellKind.ME_WORKER:
+                            self.grid.make_cells_arround_position_known(cell_pos)
+                        elif msg.data.cell_kind == CellKind.ME_EXPLORER:
+                            self.grid.make_cells_arround_position_known(cell_pos)
+                        elif msg.data.cell_kind == CellKind.SOLDIER_BORN:
+                            self.soldiers += 1
+                        elif msg.data.cell_kind == CellKind.SOLDIER_DIED:
+                            self.soldiers -= 1
+                        elif msg.data.cell_kind == CellKind.WORKER_BORN:
+                            self.workers += 1
+                        elif msg.data.cell_kind == CellKind.WORKER_DIED:
+                            self.workers -= 1
+                        elif msg.data.cell_kind == CellKind.INVALID_FOR_WORKER:
+                            if self.game.ant.antType == AntType.KARGAR.value:
+                                self.grid[cell_pos].invalid = True
+                        elif msg.data.cell_kind == CellKind.EXPLORER_DIED:
+                            self.explorers -= 1
+                        elif msg.data.cell_kind == CellKind.DEFENDER_DIED:
+                            self.defenders -= 1
 
-                elif msg.type == ChatKind.OBSERVATION_VALUE:
-                    self.grid[cell_pos].wall = False
-                    if msg.data.cell_kind == CellKind.BREAD:
-                        self.grid[cell_pos].bread_value = msg.data.value
-                        self.grid[cell_pos].grass_value = 0
-                    elif msg.data.cell_kind == CellKind.GRASS:
-                        self.grid[cell_pos].bread_value = 0
-                        self.grid[cell_pos].grass_value = msg.data.value
+                    elif msg.type == ChatKind.OBSERVATION_VALUE:
+                        self.grid[cell_pos].wall = False
+                        if msg.data.cell_kind == CellKind.BREAD:
+                            self.grid[cell_pos].bread_value = msg.data.value
+                            self.grid[cell_pos].grass_value = 0
+                        elif msg.data.cell_kind == CellKind.GRASS:
+                            self.grid[cell_pos].bread_value = 0
+                            self.grid[cell_pos].grass_value = msg.data.value
 
     def add_vision_to_map(self) -> None:
         "the ant adds its vision information to the grid"
@@ -333,16 +368,55 @@ class Env():
     def check_for_enemy_base_estimate(self):
         pass
 
+    def update_resource_weights(self):
+        if self.workers >= MIN_WORKER_ANTS:
+            cv.GRASS_SCORE = 4
+            cv.BREAD_SCORE = 1
+        else:
+            cv.GRASS_SCORE = 1
+            cv.BREAD_SCORE = 2
+
+    def did_i_died(self):
+        if self.game.ant.health < self.previous_health and not self.died:
+            self.died = True
+            if self.game.ant.antType == AntType.KARGAR.value:
+                self.messages.append(Chat(
+                    type=ChatKind.OBSERVATION_SIMPLE,
+                    data=ChatObservationSimple(
+                        self.task.destination, CellKind.WORKER_DIED)
+                ))
+            elif self.game.ant.antType == AntType.SARBAAZ.value:
+                self.messages.append(Chat(
+                    type=ChatKind.OBSERVATION_SIMPLE,
+                    data=ChatObservationSimple(
+                        self.task.destination, CellKind.SOLDIER_DIED)
+                ))
+                if self.is_explorer:
+                    self.messages.append(Chat(
+                        type=ChatKind.OBSERVATION_SIMPLE,
+                        data=ChatObservationSimple(
+                            self.task.destination, CellKind.EXPLORER_DIED)
+                    ))
+                elif self.is_defender:
+                    self.messages.append(Chat(
+                        type=ChatKind.OBSERVATION_SIMPLE,
+                        data=ChatObservationSimple(
+                            self.task.destination, CellKind.DEFENDER_DIED)
+                    ))
+
     def update_grid(self):
         self.grid.enemies_in_sight_prev = np.copy(
             self.grid.enemies_in_sight_curr)
         self.grid.enemies_in_sight_curr = np.zeros(
             (self.grid.height, self.grid.width))
+        self.did_i_died()
+        self.update_resource_weights()
         self.add_vision_to_map()
         self.handle_new_messages()
         self.add_attack_data_to_map()
         self.check_for_enemy_base_estimate()
         self.grid.update_last_seens()
+        self.previous_health = self.game.ant.health
 
     def can_we_attack(self):
         "basically telling us that is enemy base seen?"
@@ -480,6 +554,7 @@ class Env():
                 self.is_explorer = True
                 destination = self.grid.get_explore_location(self.position)
                 self.task = Task(TaskType.EXPLORE, destination)
+                self.is_explorer = True
                 self.messages.append(Chat(
                     type=ChatKind.OBSERVATION_SIMPLE,
                     data=ChatObservationSimple(
@@ -488,6 +563,7 @@ class Env():
             else:
                 destination = self.grid.where_to_defend(position=self.position)
                 self.task = Task(TaskType.DEFEND, destination=destination)
+                self.is_defender = True
                 self.messages.append(Chat(
                     type=ChatKind.OBSERVATION_SIMPLE,
                     data=ChatObservationSimple(
@@ -549,9 +625,38 @@ class Env():
         message, priority = encode(ant_id, self.messages)
         return message, priority
 
-    def get_direction(self):
+    def get_direction_worker(self):
         if not self.task:
             return Direction.CENTER
+
+        direction = self.grid.get_direction(
+            self.position, self.task.destination, task=self.task, trap=True)
+
+        if direction is None:
+            self.grid[self.task.destination].invalid = True
+            self.task = None
+            self.update_task()
+            self.messages.append(Chat(
+                type=ChatKind.OBSERVATION_SIMPLE,
+                data=ChatObservationSimple(
+                    self.task.destination, CellKind.INVALID_FOR_WORKER)
+            ))
+            direction = self.grid.get_direction(
+                self.position, self.task.destination, task=self.task, trap=True)
+            if direction is None:
+                self.grid[self.task.destination].invalid = True
+                self.task = None
+                self.messages.append(Chat(
+                    type=ChatKind.OBSERVATION_SIMPLE,
+                    data=ChatObservationSimple(
+                        self.task.destination, CellKind.INVALID_FOR_WORKER)
+                ))
+                direction = Direction.CENTER
+        return direction
+
+    def get_direction_soldier(self):
+        if not self.task:
+                return Direction.CENTER
 
         direction = self.grid.get_direction(
             self.position, self.task.destination, task=self.task)
@@ -578,6 +683,12 @@ class Env():
                 direction = Direction.CENTER
         return direction
 
+    def get_direction(self):
+        if self.game.ant.antType == AntType.KARGAR.value:
+            return self.get_direction_worker()
+        if self.game.ant.antType == AntType.SARBAAZ.value:
+            return self.get_direction_soldier()
+        
     def get_self_type_message(self):
         if self.game.ant.antType == AntType.KARGAR.value:
             return Chat(

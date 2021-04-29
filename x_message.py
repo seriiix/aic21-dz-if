@@ -58,11 +58,17 @@ class CellKind(Enum):
     WANT_TO_EXPLORE = 12
 
     # NO POSITION NEEDED
-    SOLDIER_BORN = 13
     EXPLORER_DIED = 14
     HELP_ME = 15
     LETS_FUCK_THIS_SHIT = 16
     ME_EXPLORER = 17
+    WORKER_BORN = 18
+    WORKER_DIED = 19
+    SOLDIER_BORN = 20
+    SOLDIER_DIED = 21
+    DEFENDER_DIED = 22
+
+    INVALID_FOR_WORKER = 22
 
     @staticmethod
     def get_value(kind: int):
@@ -92,8 +98,6 @@ class CellKind(Enum):
             return CellKind.WANT_TO_GATHER
         if kind == 12:
             return CellKind.WANT_TO_EXPLORE
-        if kind == 13:
-            return CellKind.SOLDIER_BORN
         if kind == 14:
             return CellKind.EXPLORER_DIED
         if kind == 15:
@@ -102,7 +106,18 @@ class CellKind(Enum):
             return CellKind.LETS_FUCK_THIS_SHIT
         if kind == 17:
             return CellKind.ME_EXPLORER
-
+        if kind == 18:
+            return CellKind.WORKER_BORN
+        if kind == 19:
+            return CellKind.WORKER_DIED
+        if kind == 20:
+            return CellKind.SOLDIER_BORN
+        if kind == 21:
+            return CellKind.SOLDIER_DIED
+        if kind == 22:
+            return CellKind.INVALID_FOR_WORKER
+        if kind == 23: 
+            return CellKind.DEFENDER_DIED
         return None
 
 
@@ -114,6 +129,8 @@ def get_kind_score(kind: CellKind):
     if kind == CellKind.BREAD:
         return 5
     if kind == CellKind.INVALID:
+        return 100
+    if kind == CellKind.INVALID_FOR_WORKER:
         return 100
     if kind == CellKind.SWAMP:
         return 10
@@ -141,6 +158,20 @@ def get_kind_score(kind: CellKind):
         return 3000
     if kind == CellKind.ME_EXPLORER:
         return 100
+    
+    if kind == CellKind.WORKER_BORN:
+        return 250
+    if kind == CellKind.WORKER_DIED:
+        return 254
+    if kind == CellKind.SOLDIER_BORN:
+        return 251
+    if kind == CellKind.SOLDIER_DIED:
+        return 253
+    if kind == CellKind.DEFENDER_DIED:
+        return 250
+    if kind == CellKind.EXPLORER_DIED:
+        return 250
+
     return 0
 
 
