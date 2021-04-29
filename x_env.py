@@ -422,15 +422,6 @@ class Env():
         self.grid.update_last_seens()
         self.previous_health = self.game.ant.health
 
-    def can_we_attack(self):
-        "basically telling us that is enemy base seen?"
-        # تعداد سربازا به حد نصاب برسه
-        # از طریق تقارن بیس انمی رو داشته باشیم
-        # ترن بازی از یه تعدادی بیشتر بشه
-        #
-        # TODO : More analysis can be done here. Ex. condition on current soldiers
-        return self.grid.unsafe_zone_seen or self.grid.enemy_base
-
     def update_worker_task(self):
         if self.game.ant.currentResource is not None and self.game.ant.currentResource.value >= MIN_CARRY_FOR_ANT:
             self.task = Task(type=TaskType.RETURN,
@@ -533,33 +524,10 @@ class Env():
                 return
 
     def update_soldier_task(self):
-        # print("OUR SOLDIERS=", self.grid[self.position].our_soldiers)
-
         if not self.task:
             # NEW ANT GENERATED
-            if self.soldiers > MIN_ATTACKING_SOLDIERS:
-                if self.grid.enemy_base:
-                    self.gathering_position = self.grid.get_gathering_position(
-                        self.grid.enemy_base)
-                    self.task = Task(
-                        TaskType.GATHER, destination=self.gathering_position)
-                    self.gathering_position = None
-                else:
-                    # TODO: TURN NUMBER?
-                    self.task = Task(
-                        TaskType.GATHER, destination=self.grid.base_pos)
-            elif self.explorers < MIN_EXPLORERS:
-                self.is_explorer = True
-                destination = self.grid.get_explore_location(self.position)
-                self.task = Task(TaskType.EXPLORE, destination)
-                self.is_explorer = True
-                self.messages.append(Chat(
-                    type=ChatKind.OBSERVATION_SIMPLE,
-                    data=ChatObservationSimple(
-                        self.task.destination, CellKind.WANT_TO_EXPLORE)
-                ))
-            else:
-                destination = self.grid.where_to_defend(position=self.position)
+            if self.defenders < DEFENDERS_IN_LAYER:
+                self.task = destination = self.grid.where_to_defend_layer(position=self.position, layer=1)
                 self.task = Task(TaskType.DEFEND, destination=destination)
                 self.is_defender = True
                 self.messages.append(Chat(
@@ -567,8 +535,20 @@ class Env():
                     data=ChatObservationSimple(
                         self.task.destination, CellKind.WANT_TO_DEFEND)
                 ))
+            else:
+                self.task = destination = self.grid.where_to_defend_layer(position=self.position, layer=2)
+                self.task = Task(TaskType.DEFEND, destination=destination)
+                self.is_defender = True
+                self.messages.append(Chat(
+                    type=ChatKind.OBSERVATION_SIMPLE,
+                    data=ChatObservationSimple(
+                        self.task.destination, CellKind.WANT_TO_DEFEND)
+                ))
+            
         else:
             # شرطهای تغییر حالتها بدون چون و چرا!!!
+            if self.get_last_turn_number() >= FORCE_ATTACK_TURN:
+                self.gathering_position = self.base_pos
 
             if self.gathering_position:
                 self.task = Task(
@@ -634,10 +614,17 @@ class Env():
                             self.position)
                         return
                 else:
-                    self.attacking_position = self.grid.where_to_stand(
-                        self.position)
-                    self.task = Task(TaskType.STAND_ATTACK,
-                                     destination=self.attacking_position)
+                    if self.grid.manhattan(self.position, self.base_pos) <= BASE_ATTACK_DISTANCE:
+                        # اینجا میگه اگه خودشون دیدن بیس رو برنگردن و حمله بزنن
+                        seed(self.ant_id)
+                        self.task = self.task = Task(
+                            TaskType.BASE_ATTACK, destination=self.grid.enemy_base
+                        )
+                    else:
+                        self.attacking_position = self.grid.where_to_stand(
+                            self.position)
+                        self.task = Task(TaskType.STAND_ATTACK,
+                                        destination=self.attacking_position)
 
             elif self.task.type == TaskType.KILL:
                 if self.grid.is_enemy_in_sight():
