@@ -439,7 +439,7 @@ class Grid():
                             locations.append(position)
         return locations
 
-    def get_gathering_position(self, position):
+    def get_gathering_position(self, position, self_position=None):
         # TODO: better option you shoud get optimal value by knowing soldier distances
         path = self.bfs(self.base_pos, position, known=True)
         return path[int(len(path)/cv.GATHERING_PORTION)]
@@ -456,6 +456,37 @@ class Grid():
             for cell in row:
                 if self.manhattan(position, cell.position) <= MAX_AGENT_VIEW_DISTANCE:
                     cell.known = True
+
+    def where_to_stand(self, position):
+        path = self.a_star(position, self.enemy_base)
+        for loc in path:
+            if self.manhattan(loc, self.enemy_base) == STAND_RADIUS_FROM_ENEMY_BASE:
+                return loc
+
+    def is_good_to_stand(self, position: Position, cell_pos: Position):
+        if self.manhattan(position, cell_pos) <= MAX_DEVIATION_RADIUS and self.manhattan(self.enemy_base, cell_pos) == STAND_RADIUS_FROM_ENEMY_BASE \
+                and not self[cell_pos].invalid and not self[cell_pos].wall:
+            return True
+        return False
+
+    def get_deviation_position(self, position):
+        # TODO: باید یه نقطه به فاصله 3 از خودش و شعاع 6 از بیس انمی برگردونه.
+        locations = []
+        for row in self.cells:
+            for cell in row:
+                if self.is_good_to_stand(position, cell.position):
+                    locations.append(cell.position)
+        return choice(locations)
+
+    def get_attack_position(self, position):
+        locations = []
+        for row in self.cells:
+            for cell in row:
+                if self.manhattan(cell.position, self.enemy_base) <= MAX_ATTACK_DISTANCE_SOLDIER:
+                    locations.append(cell.position)
+        paths = [self.a_star(position, location) for location in locations]
+        distances = [len(path) if path else np.inf for path in paths]
+        return locations[distances.index(min(distances))]
 
 
 # tests

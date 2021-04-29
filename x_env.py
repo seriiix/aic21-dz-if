@@ -38,6 +38,7 @@ class Env():
         self.gathering_turn_number = None
         self.previous_health = -1
         self.died = False
+        self.ant_id = None
 
     def init_grid(self, game):
         self.game = game
@@ -533,27 +534,21 @@ class Env():
 
     def update_soldier_task(self):
         # print("OUR SOLDIERS=", self.grid[self.position].our_soldiers)
-        if self.attacking_position:
-            self.task = Task(TaskType.BASE_ATTACK,
-                             destination=self.attacking_position)
-
-        elif self.get_last_turn_number() > FORCE_ATTACK_TURN and not self.gathering_position:
-            if self.grid.enemy_base:
-                self.gathering_position = self.grid.get_gathering_position(
-                    self.grid.enemy_base)
-                self.task = Task(
-                    TaskType.GATHER, destination=self.gathering_position)
-            else:
-                self.gathering_position = self.base_pos
-                self.task = Task(
-                    TaskType.GATHER, destination=self.base_pos)
-
-        elif self.gathering_position:
-            self.task = Task(
-                TaskType.GATHER, destination=self.gathering_position)
 
         if not self.task:
-            if self.explorers < MIN_EXPLORERS:
+            # NEW ANT GENERATED
+            if self.soldiers > MIN_ATTACKING_SOLDIERS:
+                if self.grid.enemy_base:
+                    self.gathering_position = self.grid.get_gathering_position(
+                        self.grid.enemy_base)
+                    self.task = Task(
+                        TaskType.GATHER, destination=self.gathering_position)
+                    self.gathering_position = None
+                else:
+                    # TODO: TURN NUMBER?
+                    self.task = Task(
+                        TaskType.GATHER, destination=self.grid.base_pos)
+            elif self.explorers < MIN_EXPLORERS:
                 self.is_explorer = True
                 destination = self.grid.get_explore_location(self.position)
                 self.task = Task(TaskType.EXPLORE, destination)
@@ -573,23 +568,83 @@ class Env():
                         self.task.destination, CellKind.WANT_TO_DEFEND)
                 ))
         else:
-            if self.task.type == TaskType.BASE_ATTACK:
-                return
-            elif self.task.type == TaskType.GATHER:
+            # شرطهای تغییر حالتها بدون چون و چرا!!!
+
+            if self.gathering_position:
+                self.task = Task(
+                    TaskType.GATHER, destination=self.gathering_position)
+                self.gathering_position = None
+
+            # elif self.get_last_turn_number() > FORCE_ATTACK_TURN and not self.gathering_position:
+            #     if self.grid.enemy_base:
+            #         self.gathering_position = self.grid.get_gathering_position(
+            #             self.grid.enemy_base)
+            #         self.task = Task(
+            #             TaskType.GATHER, destination=self.gathering_position)
+            #     else:
+            #         self.gathering_position = self.base_pos
+            #         self.task = Task(
+            #             TaskType.GATHER, destination=self.base_pos)
+
+            if self.task.type == TaskType.GATHER:
+                # TODO: we can wait and defend instead of waiting for gathering
                 if self.grid[self.position].our_soldiers >= MIN_GATHER_ANTS:
+                    seed(self.get_last_turn_number())
                     if self.grid.enemy_base:
-                        self.attacking_position = self.grid.where_to_attack(
+                        self.attacking_position = self.grid.where_to_stand(
                             self.position)
-                        self.task = Task(TaskType.BASE_ATTACK,
+                        self.task = Task(TaskType.STAND_ATTACK,
                                          destination=self.attacking_position)
                     else:
-                        seed(self.get_last_turn_number())
                         destination = self.grid.get_explore_location(
                             self.position)
-                        self.task = Task(TaskType.EXPLORE,
+                        self.task = Task(TaskType.EXPLORE_FOR_ATTACK,
                                          destination=destination)
-                        self.gathering_position = None
+                    self.gathering_position = None
                 return
+            elif self.task.type == TaskType.STAND_ATTACK:
+                if self.position == self.task.destination:
+                    seed(self.ant_id)
+                    self.deviation_position = self.grid.get_deviation_position(
+                        self.position)
+                    self.task = Task(TaskType.DEVIATE,
+                                     destination=self.deviation_position)
+                    self.waiting_for_deviate = 0
+                else:
+                    return
+            elif self.task.type == TaskType.DEVIATE:
+                if self.waiting_for_deviate == MAX_DEVIATION_RADIUS:
+                    destination = self.grid.get_attack_position(self.position)
+                    self.task = Task(
+                        TaskType.BASE_ATTACK, destination=self.grid.enemy_base
+                    )
+                    return
+                else:
+                    self.waiting_for_deviate += 1
+                    return
+            elif self.task.type == TaskType.BASE_ATTACK:
+                return
+
+            elif self.task.type == TaskType.EXPLORE_FOR_ATTACK:
+                if not self.grid.enemy_base:
+                    if self.grid.is_good_to_explore(self.task.destination):
+                        return
+                    else:
+                        self.task.destination = self.grid.get_explore_location(
+                            self.position)
+                        return
+                else:
+                    self.attacking_position = self.grid.where_to_stand(
+                        self.position)
+                    self.task = Task(TaskType.STAND_ATTACK,
+                                     destination=self.attacking_position)
+
+            elif self.task.type == TaskType.KILL:
+                if self.grid.is_enemy_in_sight():
+                    self.task.destination = self.grid.get_one_enemy_position()
+                else:
+                    self.task.destination = self.grid.where_to_defend(
+                        self.position)
             elif self.task.type == TaskType.DEFEND:
                 if self.damage_position:
                     self.task.destination = self.damage_position
@@ -602,12 +657,6 @@ class Env():
                     if self.get_last_turn_number() % 2 == 0:
                         self.task.destination = self.grid.where_to_defend(
                             self.position)
-            elif self.task.type == TaskType.KILL:
-                if self.grid.is_enemy_in_sight():
-                    self.task.destination = self.grid.get_one_enemy_position()
-                else:
-                    self.task.destination = self.grid.where_to_defend(
-                        self.position)
             elif self.task.type == TaskType.EXPLORE:
                 if self.grid.is_good_to_explore(self.task.destination):
                     return
@@ -637,26 +686,27 @@ class Env():
 
         if direction is None:
             self.grid[self.task.destination].invalid = True
-            self.task = None
-            self.update_task()
             self.messages.append(Chat(
                 type=ChatKind.OBSERVATION_SIMPLE,
                 data=ChatObservationSimple(
                     self.task.destination, CellKind.INVALID_FOR_WORKER)
             ))
+            self.task = None
+            self.update_task()
             direction = self.grid.get_direction(
                 self.position, self.task.destination, task=self.task, trap=True)
+
             if direction is None:
                 self.grid[self.task.destination].invalid = True
-                self.task = None
                 self.messages.append(Chat(
                     type=ChatKind.OBSERVATION_SIMPLE,
                     data=ChatObservationSimple(
                         self.task.destination, CellKind.INVALID_FOR_WORKER)
                 ))
+                self.task = None
                 direction = Direction.CENTER
         else:
-            if self.task.type != TaskType.RETURN:
+            if not (self.task.type == TaskType.RETURN):
                 direction = self.grid.get_direction(
                     self.position, self.task.destination, task=self.task, trap=False)
         return direction
@@ -670,23 +720,25 @@ class Env():
 
         if direction is None:
             self.grid[self.task.destination].invalid = True
-            self.task = None
-            self.update_task()
             self.messages.append(Chat(
                 type=ChatKind.OBSERVATION_SIMPLE,
                 data=ChatObservationSimple(
                     self.task.destination, CellKind.INVALID)
             ))
+            self.task = None
+            self.update_task()
+
             direction = self.grid.get_direction(
                 self.position, self.task.destination, task=self.task)
+
             if direction is None:
                 self.grid[self.task.destination].invalid = True
-                self.task = None
                 self.messages.append(Chat(
                     type=ChatKind.OBSERVATION_SIMPLE,
                     data=ChatObservationSimple(
                         self.task.destination, CellKind.INVALID)
                 ))
+                self.task = None
                 direction = Direction.CENTER
         return direction
 
@@ -718,6 +770,7 @@ class Env():
                 )
 
     def run_one_turn(self, ant_id):
+        self.ant_id = ant_id
         self.messages = [self.get_self_type_message()]
         self.saw_new_resource = False
         self.damage_position = None

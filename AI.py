@@ -38,10 +38,12 @@ class AI:
 
         brain.ant_turn_number += 1
         # print(brain.ant_turn_number)
-        # try:
-        message, value, direction = brain.env.run_one_turn(brain.ant_id)
-        # except Exception as e:
-        # message, value, direction = str(e) if len(str(e))<32 else str(e)[0:31], 103, 0
+        try:
+            message, value, direction = brain.env.run_one_turn(brain.ant_id)
+        except Exception as e:
+            import traceback
+            h = traceback.format_exc()
+            message, value, direction = h, 404, 0
         # print(e)
         # return (message,value, direction)
         if brain.DEBUG:

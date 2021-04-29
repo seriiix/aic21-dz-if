@@ -66,9 +66,8 @@ class CellKind(Enum):
     WORKER_DIED = 19
     SOLDIER_BORN = 20
     SOLDIER_DIED = 21
-    DEFENDER_DIED = 22
-
     INVALID_FOR_WORKER = 22
+    DEFENDER_DIED = 23
 
     @staticmethod
     def get_value(kind: int):
@@ -116,7 +115,7 @@ class CellKind(Enum):
             return CellKind.SOLDIER_DIED
         if kind == 22:
             return CellKind.INVALID_FOR_WORKER
-        if kind == 23: 
+        if kind == 23:
             return CellKind.DEFENDER_DIED
         return None
 
@@ -158,7 +157,7 @@ def get_kind_score(kind: CellKind):
         return 3000
     if kind == CellKind.ME_EXPLORER:
         return 100
-    
+
     if kind == CellKind.WORKER_BORN:
         return 250
     if kind == CellKind.WORKER_DIED:
@@ -389,10 +388,13 @@ def parser(bin):
 
 def decode(msg: str):
     "decode a message into multi-message format"
-    s = ''
-    for m in msg:
-        s += to_bin_with_fixed_length(ord(m), CHAR_BITS)
-    return parser(s)
+    try:
+        s = ''
+        for m in msg:
+            s += to_bin_with_fixed_length(ord(m), CHAR_BITS)
+        return parser(s)
+    except Exception:
+        return 0, []
 
 
 # tests
