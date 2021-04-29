@@ -458,11 +458,20 @@ class Grid():
                     cell.known = True
 
     def where_to_stand(self, position):
-        # TODO باید یه نقطه به شعاع 6 از بیس بده
-        pass
+        path = self.a_star(position, self.enemy_base)
+        for loc in path:
+            if self.manhattan(loc, self.enemy_base) == STAND_RADIUS_FROM_ENEMY_BASE:
+                return loc
 
     def get_deviation_position(self, position):
         # TODO: باید یه نقطه به فاصله 3 از خودش و شعاع 6 از بیس انمی برگردونه.
+        locations = []
+        for row in self.cells:
+            for cell in row:
+                if self.manhattan(position, cell.position) <= MAX_DEVIATION_RADIUS and
+                    self.self.manhattan(self.enemy_base, cell.position) == STAND_RADIUS_FROM_ENEMY_BASE:
+                    locations.append(cell.position)
+        return choice(locations)
 
 
 # tests
