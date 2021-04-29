@@ -439,7 +439,7 @@ class Grid():
                             locations.append(position)
         return locations
 
-    def get_gathering_position(self, position):
+    def get_gathering_position(self, position, self_position=None):
         # TODO: better option you shoud get optimal value by knowing soldier distances
         path = self.bfs(self.base_pos, position, known=True)
         return path[int(len(path)/cv.GATHERING_PORTION)]
@@ -456,6 +456,13 @@ class Grid():
             for cell in row:
                 if self.manhattan(position, cell.position) <= MAX_AGENT_VIEW_DISTANCE:
                     cell.known = True
+
+    def where_to_stand(self, position):
+        # TODO باید یه نقطه به شعاع 6 از بیس بده
+        pass
+
+    def get_deviation_position(self, position):
+        # TODO: باید یه نقطه به فاصله 3 از خودش و شعاع 6 از بیس انمی برگردونه.
 
 
 # tests
