@@ -663,7 +663,6 @@ class Env():
                         self.position)
 
 
-
     def update_task(self):
         "analyzes the map and trys to get the most important task"
         if self.game.ant.antType == AntType.KARGAR.value:
