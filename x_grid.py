@@ -463,12 +463,18 @@ class Grid():
             if self.manhattan(loc, self.enemy_base) == STAND_RADIUS_FROM_ENEMY_BASE:
                 return loc
 
+    def is_good_to_stand(self, position: Position, cell_pos: Position):
+        if self.manhattan(position, cell_pos) <= MAX_DEVIATION_RADIUS and self.manhattan(self.enemy_base, cell_pos) == STAND_RADIUS_FROM_ENEMY_BASE \
+                and not self[cell_pos].invalid and not self[cell_pos].wall:
+            return True
+        return False
+
     def get_deviation_position(self, position):
         # TODO: باید یه نقطه به فاصله 3 از خودش و شعاع 6 از بیس انمی برگردونه.
         locations = []
         for row in self.cells:
             for cell in row:
-                if self.manhattan(position, cell.position) <= MAX_DEVIATION_RADIUS and self.manhattan(self.enemy_base, cell.position) == STAND_RADIUS_FROM_ENEMY_BASE:
+                if self.is_good_to_stand(position, cell.position):
                     locations.append(cell.position)
         return choice(locations)
 
