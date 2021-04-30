@@ -374,7 +374,7 @@ class Grid():
         نکته اینه که به مرور زمان میتونیم شعاع دفاع رو بیشتر کنیم."""
         # TODO: check if there are defenders there?
         radius_cells = [cell.position for row in self.cells for cell in row
-                        if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS and not cell.invalid and cell.safe and not cell.wall
+                        if self.manhattan(cell.position, self.base_pos) == cv.DEFEND_RADIUS and not cell.invalid and cell.safe and not cell.wall
                         ]
         radius_cell_paths = [
             self.bfs(self.base_pos, position, known=True) for position in radius_cells]
@@ -389,7 +389,7 @@ class Grid():
         نکته اینه که به مرور زمان میتونیم شعاع دفاع رو بیشتر کنیم."""
         # TODO: check if there are defenders there?
         radius_cells = [cell.position for row in self.cells for cell in row
-                        if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS*layer and not cell.invalid and cell.safe and not cell.wall
+                        if self.manhattan(cell.position, self.base_pos) == cv.DEFEND_RADIUS*layer and not cell.invalid and cell.safe and not cell.wall
                         ]
         radius_cell_paths = [
             self.bfs(self.base_pos, position, known=True) for position in radius_cells]
@@ -559,7 +559,7 @@ class Grid():
     def get_group_defend_location(self, position, layer=1):
         if self.enemy_base:
             radius_cells = [cell.position for row in self.cells for cell in row
-                            if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS*layer and not cell.invalid and cell.safe and not cell.wall
+                            if self.manhattan(cell.position, self.base_pos) == cv.DEFEND_RADIUS*layer and not cell.invalid and cell.safe and not cell.wall
             ]
             radius_cell_paths = [
                 self.bfs(self.enemy_base, location, known=True) for location in radius_cells]
@@ -568,7 +568,7 @@ class Grid():
             return choices(radius_cells, weights=radius_cell_points, k=1)[0]
         else:
             radius_cells = [cell.position for row in self.cells for cell in row
-                if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS*layer and not cell.invalid and cell.safe and not cell.wall
+                if self.manhattan(cell.position, self.base_pos) == cv.DEFEND_RADIUS*layer and not cell.invalid and cell.safe and not cell.wall
             ]
             radius_cell_paths = [
                 self.bfs(self.position, location, known=True) for location in radius_cells]

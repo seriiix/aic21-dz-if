@@ -819,6 +819,7 @@ class Env():
                 )
 
     def run_one_turn(self, ant_id):
+        cv.DEFEND_RADIUS = self.get_defend_radius()
         self.ant_id = ant_id
         self.messages = [self.get_self_type_message()]
         self.saw_new_resource = False
