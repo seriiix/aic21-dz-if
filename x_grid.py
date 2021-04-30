@@ -488,7 +488,8 @@ class Grid():
 
     def get_explore_location(self, start: Position) -> Position:
         locations = self.get_seen_cells_neighbours()
-        weights = [1024/self.manhattan(start, location) for location in locations if self[location].safe]
+        weights = [1024/self.manhattan(start, location)
+                   for location in locations if self[location].safe]
         location = choices(locations, weights=weights, k=1)[
             0] if len(locations) else start
         return location
@@ -560,22 +561,21 @@ class Grid():
         if self.enemy_base:
             radius_cells = [cell.position for row in self.cells for cell in row
                             if self.manhattan(cell.position, self.base_pos) == cv.DEFEND_RADIUS*layer and not cell.invalid and cell.safe and not cell.wall
-            ]
+                            ]
             radius_cell_paths = [
                 self.bfs(self.enemy_base, location, known=True) for location in radius_cells]
             radius_cell_points = [
-                (max(self.width,self.height)-len(path)) if path else .001 for path in radius_cell_paths]
+                (max(self.width, self.height)-len(path)) if path else .001 for path in radius_cell_paths]
             return choices(radius_cells, weights=radius_cell_points, k=1)[0]
         else:
             radius_cells = [cell.position for row in self.cells for cell in row
-                if self.manhattan(cell.position, self.base_pos) == cv.DEFEND_RADIUS*layer and not cell.invalid and cell.safe and not cell.wall
-            ]
+                            if self.manhattan(cell.position, self.base_pos) == cv.DEFEND_RADIUS*layer and not cell.invalid and cell.safe and not cell.wall
+                            ]
             radius_cell_paths = [
-                self.bfs(self.position, location, known=True) for location in radius_cells]
+                self.bfs(position, location, known=True) for location in radius_cells]
             radius_cell_points = [
                 (1024/len(path)) if path else .001 for path in radius_cell_paths]
             return choices(radius_cells, weights=radius_cell_points, k=1)[0]
-
 
 
 # tests
