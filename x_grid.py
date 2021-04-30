@@ -361,14 +361,21 @@ class Grid():
         اگه خوب نباشه یه جای بهتر میدیم بهش. چون ممکنه قبلا اون نقطه دیده نمیشده و بهش اساین شده
         نکته اینه که به مرور زمان میتونیم شعاع دفاع رو بیشتر کنیم."""
         # TODO: check if there are defenders there?
+        noise = randint(-1,1)
         radius_cells = [cell.position for row in self.cells for cell in row
-                        if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS*layer and not cell.invalid
+                        if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS*layer+noise and not cell.invalid and not cell.wall
                         ]
-        radius_cell_paths = [
-            self.bfs(self.base_pos, position, known=True) for position in radius_cells]
-        radius_cell_points = [
-            len(path) if path else .001 for path in radius_cell_paths]
-        return choices(radius_cells, weights=radius_cell_points, k=1)[0]
+        radius_paths = [self.bfs(position, self.base_pos, known=True) for position in radius_cells]
+
+        radius_cells_new = []
+        for i in range(len(radius_cells)):
+            if (radius_paths[i] and len(radius_paths[i])==DEFEND_RADIUS*layer+noise):
+                radius_cells_new.append(radius_cells[i])
+
+        radius_distances = [self.manhattan(position, location) for location in radius_cells_new]
+        
+        radius_cell_points = [1/distance for distance in radius_distances]
+        return choices(radius_cells_new, weights=radius_cell_points, k=1)[0]
 
     def where_to_attack(self, position: Position, current_destination=None) -> Position:
         for row in self.cells:
@@ -497,7 +504,7 @@ class Grid():
         locations = []
         for row in self.cells:
             for cell in row:
-                if self.manhattan(cell.position, self.enemy_base) <= MAX_ATTACK_DISTANCE_SOLDIER:
+                if self.manhattan(cell.position, self.enemy_base) == MAX_ATTACK_DISTANCE_SOLDIER:
                     locations.append(cell.position)
         paths = [self.a_star(position, location) for location in locations]
         distances = [len(path) if path else np.inf for path in paths]

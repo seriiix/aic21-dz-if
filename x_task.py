@@ -16,6 +16,7 @@ class TaskType(Enum):
     DEVIATE = 9  # سربازا از هم فاصله میگیرن
     EXPLORE_FOR_ATTACK = 10
 
+    KILL_BY_POSITION = 11
 
 class Task:
     # TODO: tasks can expire -> especially explore

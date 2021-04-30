@@ -527,7 +527,8 @@ class Env():
         if not self.task:
             # NEW ANT GENERATED
             if self.defenders < DEFENDERS_IN_LAYER:
-                self.task = destination = self.grid.where_to_defend_layer(position=self.position, layer=1)
+                self.layer = 1
+                destination = self.grid.where_to_defend_layer(position=self.position, layer=1)
                 self.task = Task(TaskType.DEFEND, destination=destination)
                 self.is_defender = True
                 self.messages.append(Chat(
@@ -536,7 +537,8 @@ class Env():
                         self.task.destination, CellKind.WANT_TO_DEFEND)
                 ))
             else:
-                self.task = destination = self.grid.where_to_defend_layer(position=self.position, layer=2)
+                self.layer = 2
+                destination = self.grid.where_to_defend_layer(position=self.position, layer=2)
                 self.task = Task(TaskType.DEFEND, destination=destination)
                 self.is_defender = True
                 self.messages.append(Chat(
@@ -555,17 +557,7 @@ class Env():
                     TaskType.GATHER, destination=self.gathering_position)
                 self.gathering_position = None
 
-            # elif self.get_last_turn_number() > FORCE_ATTACK_TURN and not self.gathering_position:
-            #     if self.grid.enemy_base:
-            #         self.gathering_position = self.grid.get_gathering_position(
-            #             self.grid.enemy_base)
-            #         self.task = Task(
-            #             TaskType.GATHER, destination=self.gathering_position)
-            #     else:
-            #         self.gathering_position = self.base_pos
-            #         self.task = Task(
-            #             TaskType.GATHER, destination=self.base_pos)
-
+                
             if self.task.type == TaskType.GATHER:
                 # TODO: we can wait and defend instead of waiting for gathering
                 if self.grid[self.position].our_soldiers >= MIN_GATHER_ANTS:
@@ -620,6 +612,7 @@ class Env():
                         self.task = self.task = Task(
                             TaskType.BASE_ATTACK, destination=self.grid.enemy_base
                         )
+                        
                     else:
                         self.attacking_position = self.grid.where_to_stand(
                             self.position)
@@ -630,20 +623,32 @@ class Env():
                 if self.grid.is_enemy_in_sight():
                     self.task.destination = self.grid.get_one_enemy_position()
                 else:
-                    self.task.destination = self.grid.where_to_defend(
-                        self.position)
+                    self.task.destination = self.grid.where_to_defend_layer(
+                            self.position, layer=self.layer)
+            elif self.task.type == TaskType.KILL_BY_POSITION:
+                if self.grid.manhattan(self.position, self.task.destination) < 2:
+                    if self.grid.is_enemy_in_sight():
+                        self.task.destination = self.grid.get_one_enemy_position()
+                    else:
+                        self.task.destination = self.grid.where_to_defend_layer(
+                            self.position, layer=self.layer)
+                return
             elif self.task.type == TaskType.DEFEND:
                 if self.damage_position:
-                    self.task.destination = self.damage_position
+                    self.task = Task(TaskType.KILL_BY_POSITION, self.damage_position)
                     return
                 elif self.grid.is_enemy_in_sight():
                     self.task = Task(
                         TaskType.KILL, destination=self.grid.get_one_enemy_position())
                     return
+                elif self.get_last_turn_number() >= FORCE_ATTACK_TURN:
+                    self.task = Task(
+                        TaskType.GATHER, destination=self.base_pos)
                 else:
                     if self.get_last_turn_number() % 2 == 0:
-                        self.task.destination = self.grid.where_to_defend(
-                            self.position)
+                        self.task.destination = self.grid.where_to_defend_layer(
+                            self.position, layer=self.layer)
+
             elif self.task.type == TaskType.EXPLORE:
                 if self.grid.is_good_to_explore(self.task.destination):
                     return
