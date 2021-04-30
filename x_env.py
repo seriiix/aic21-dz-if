@@ -367,18 +367,21 @@ class Env():
                         # TODO: RETURN FROM SAFE POSITIONS
 
                 elif self.task.type == TaskType.DEFEND:
-                    self.messages.append(Chat(
-                        type=ChatKind.OBSERVATION_SIMPLE,
-                        data=ChatObservationSimple(
-                            attacker_pos, CellKind.HELP_ME)
-                    ))
+                    if self.grid.enemy_base and attacker_pos==self.grid.enemy_base:
+                        pass
+                    else:
+                        self.messages.append(Chat(
+                            type=ChatKind.OBSERVATION_SIMPLE,
+                            data=ChatObservationSimple(
+                                attacker_pos, CellKind.HELP_ME)
+                        ))
 
     def check_for_enemy_base_estimate(self):
         pass
 
     def update_resource_weights(self):
         if self.workers >= MIN_WORKER_ANTS:
-            cv.GRASS_SCORE = 4
+            cv.GRASS_SCORE = 3
             cv.BREAD_SCORE = 1
         else:
             cv.GRASS_SCORE = 1
