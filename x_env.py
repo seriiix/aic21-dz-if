@@ -55,6 +55,13 @@ class Env():
         all_chats = self.game.chatBox.allChats
         return all_chats[-1].turn if len(all_chats) else -1
 
+    def get_defend_radius(self):
+        turn_number = self.get_last_turn_number()
+        init_radius = max(self.grid.width, self.grid.height) // 3
+        if turn_number == 0:
+            turn_number = 1
+        return init_radius + (turn_number // 20)
+
     def get_last_turn_messages(self):
         last_turn_number = self.get_last_turn_number()
         chats = []
@@ -598,7 +605,7 @@ class Env():
             elif self.task.type == TaskType.GROUP_DEFEND:
                 if self.get_last_turn_number() % INCREMENT_DEFEND_RADIUS_TIME == 0:
                     cv.DEFEND_RADIUS += 1
-                
+
                 if self.get_last_turn_number() % 2 == 0:
                     destination = self.grid.get_group_defend_location(
                         self.position)
@@ -608,8 +615,8 @@ class Env():
                         data=ChatObservationSimple(
                             self.task.destination, CellKind.WANT_TO_DEFEND)
                     )
-                    self.messages.append(new_message)    
-                    
+                    self.messages.append(new_message)
+
                 elif self.get_last_turn_number() >= FORCE_ATTACK_TURN:
                     if self.grid.enemy_base:
                         destination = self.grid.where_to_stand(
