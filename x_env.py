@@ -556,15 +556,7 @@ class Env():
             
         else:
             # شرطهای تغییر حالتها بدون چون و چرا!!!
-            if self.get_last_turn_number() >= FORCE_ATTACK_TURN:
-                self.gathering_position = self.base_pos
-
-            if self.gathering_position:
-                self.task = Task(
-                    TaskType.GATHER, destination=self.gathering_position)
-                self.gathering_position = None
-
-                
+   
             if self.task.type == TaskType.GATHER:
                 # TODO: we can wait and defend instead of waiting for gathering
                 if self.grid[self.position].our_soldiers >= MIN_GATHER_ANTS:
