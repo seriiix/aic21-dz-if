@@ -603,8 +603,6 @@ class Env():
                     return
 
             elif self.task.type == TaskType.GROUP_DEFEND:
-                if self.get_last_turn_number() % INCREMENT_DEFEND_RADIUS_TIME == 0:
-                    cv.DEFEND_RADIUS += 1
 
                 if self.get_last_turn_number() % 2 == 0:
                     destination = self.grid.get_group_defend_location(
