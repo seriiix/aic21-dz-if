@@ -1,5 +1,5 @@
 from enum import IntFlag
-from random import randint, choice, shuffle, choices
+from random import randint, choice, shuffle, choices, seed
 from copy import deepcopy
 from collections import deque
 from typing import List
@@ -76,6 +76,9 @@ class Grid():
         self.enemies_in_sight_prev = np.zeros((height, width))
         self.enemies_in_sight_curr = np.zeros((height, width))
 
+        self.enemy_ants_in_sight_curr = np.zeros((height, width))
+        self.enemy_ants_in_sight_prev = np.zeros((height, width))
+
     def __getitem__(self, position: Position):
         return self.cells[position.y][position.x]
 
@@ -121,6 +124,9 @@ class Grid():
         "useful for soldiers when they chase enemy ants"
         return int(np.sum(self.enemies_in_sight_curr - self.enemies_in_sight_prev)) == 0
 
+    def is_enemy_ant_killed(self):
+        return int(np.sum(self.enemy_ants_in_sight_curr - self.enemy_ants_in_sight_prev)) == 0
+
     def set_ants(self, ants, position):
         self[position].our_workers = 0
         self[position].our_soldiers = 0
@@ -136,12 +142,16 @@ class Grid():
                 if ant.antType == AntType.KARGAR.value:
                     self[position].enemy_workers += 1
                     self.enemies_in_sight_curr[position.y, position.x] += 1
+                    self.enemy_ants_in_sight_curr[position.y, position.x] += 1
                 elif ant.antType == AntType.SARBAAZ.value:
                     self[position].enemy_soldiers += 1
                     self.enemies_in_sight_curr[position.y, position.x] += 1
 
     def is_enemy_in_sight(self):
         return int(np.sum(self.enemies_in_sight_curr)) > 0
+
+    def is_enemy_ant_in_sight(self):
+        return int(np.sum(self.enemy_ants_in_sight_curr)) > 0
 
     def get_one_enemy_position(self):
         # TODO: بهتره اونی که دورتر از بیس خودمونه رو بگیریم
@@ -152,6 +162,17 @@ class Grid():
         else:
             ind = np.unravel_index(
                 self.enemies_in_sight_prev.argmax(), self.enemies_in_sight_prev.shape)
+            return Position(ind[1], ind[0])
+
+    def get_one_enemy_ant_position(self):
+        # TODO: بهتره اونی که دورتر از بیس خودمونه رو بگیریم
+        if int(np.sum(self.enemy_ants_in_sight_curr)) > 0:
+            ind = np.unravel_index(
+                self.enemy_ants_in_sight_curr.argmax(), self.enemy_ants_in_sight_curr.shape)
+            return Position(ind[1], ind[0])
+        else:
+            ind = np.unravel_index(
+                self.enemy_ants_in_sight_prev.argmax(), self.enemy_ants_in_sight_prev.shape)
             return Position(ind[1], ind[0])
 
     def fix_pos(self, pos: Position):
@@ -353,7 +374,7 @@ class Grid():
         نکته اینه که به مرور زمان میتونیم شعاع دفاع رو بیشتر کنیم."""
         # TODO: check if there are defenders there?
         radius_cells = [cell.position for row in self.cells for cell in row
-                        if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS and not cell.invalid and cell.safe
+                        if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS and not cell.invalid and cell.safe and not cell.wall
         ]
         radius_cell_paths = [
             self.bfs(self.base_pos, position, known=True) for position in radius_cells]
@@ -368,7 +389,7 @@ class Grid():
         نکته اینه که به مرور زمان میتونیم شعاع دفاع رو بیشتر کنیم."""
         # TODO: check if there are defenders there?
         radius_cells = [cell.position for row in self.cells for cell in row
-            if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS*layer and not cell.invalid and cell.safe
+            if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS*layer and not cell.invalid and cell.safe and not cell.wall
         ]
         radius_cell_paths = [
             self.bfs(self.base_pos, position, known=True) for position in radius_cells]
@@ -507,6 +528,39 @@ class Grid():
         paths = [self.a_star(position, location) for location in locations]
         distances = [len(path) if path else np.inf for path in paths]
         return locations[distances.index(min(distances))]
+
+    def get_gather_then_defend_position(self):
+        seed(10)
+        radius_cells = [cell.position for row in self.cells for cell in row
+            if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS*layer-1 and not cell.invalid and cell.safe and not cell.wall
+        ]
+        radius_cell_paths = [
+            self.bfs(position, location, known=True) for location in radius_cells]
+        r = [radius_cells[i] for i in range(len(radius_cells)) if radius_cell_paths[i] and len(radius_cell_paths[i])<DEFEND_RADIUS*layer+3]
+        return choice(r)
+
+    def get_gather_explore_position(self):
+        seed(11)
+        radius_cells = [cell.position for row in self.cells for cell in row
+            if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS*layer+1 and not cell.invalid and cell.safe and not cell.wall
+        ]
+        radius_cell_paths = [
+            self.bfs(position, location, known=True) for location in radius_cells]
+        r = [radius_cells[i] for i in range(len(radius_cells)) if radius_cell_paths[i] and len(radius_cell_paths[i])<DEFEND_RADIUS*layer+4]
+        return choice(r)
+
+    def get_explore_for_kill_location(self, position):
+        # TODO:
+        return self.get_explore_location(position)
+
+    def get_group_defend_location(self, position, layer=1):
+        radius_cells = [cell.position for row in self.cells for cell in row
+            if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS*layer and not cell.invalid and cell.safe and not cell.wall
+        ]
+        radius_cell_paths = [
+            self.bfs(position, location, known=True) for location in radius_cells]
+        radius_cell_points = [1024/len(path) if path else .001 for path in radius_cell_paths]
+        return choices(radius_cells, weights=radius_cell_points, k=1)[0]
 
 
 # tests

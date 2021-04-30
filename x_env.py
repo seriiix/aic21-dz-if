@@ -39,6 +39,7 @@ class Env():
         self.previous_health = -1
         self.died = False
         self.ant_id = None
+        self.explored_once = False
 
     def init_grid(self, game):
         self.game = game
@@ -420,6 +421,10 @@ class Env():
             self.grid.enemies_in_sight_curr)
         self.grid.enemies_in_sight_curr = np.zeros(
             (self.grid.height, self.grid.width))
+        self.grid.enemy_ants_in_sight_prev = np.copy(
+            self.grid.enemy_ants_in_sight_curr)
+        self.grid.enemy_ants_in_sight_curr = np.zeros(
+            (self.grid.height, self.grid.width))
         self.did_i_died()
         self.update_resource_weights()
         self.add_vision_to_map()
@@ -533,46 +538,78 @@ class Env():
     def update_soldier_task(self):
         if not self.task:
             # NEW ANT GENERATED
-            if self.defenders < DEFENDERS_IN_LAYER:
-                self.layer = 1
-                destination = self.grid.where_to_defend_layer(position=self.position, layer=1)
-                self.task = Task(TaskType.DEFEND, destination=destination)
-                self.is_defender = True
-                self.messages.append(Chat(
-                    type=ChatKind.OBSERVATION_SIMPLE,
-                    data=ChatObservationSimple(
-                        self.task.destination, CellKind.WANT_TO_DEFEND)
-                ))
+            if self.explorers < MIN_EXPLORERS and not self.explored_once:
+                destination = self.grid.get_gather_explore_position()
+                self.task = Task(TaskType.GATHER_EXPLORE, destination)
+                self.explorers += 1
+                new_message = Chat(
+                        type=ChatKind.OBSERVATION_SIMPLE,
+                        data=ChatObservationSimple(
+                        self.task.destination, CellKind.WANT_TO_EXPLORE)
+                )
+                self.messages.append(new_message)
+
             else:
-                self.layer = 2
-                destination = self.grid.where_to_defend_layer(position=self.position, layer=2)
-                self.task = Task(TaskType.DEFEND, destination=destination)
-                self.is_defender = True
-                self.messages.append(Chat(
-                    type=ChatKind.OBSERVATION_SIMPLE,
-                    data=ChatObservationSimple(
+                destination = self.grid.get_gather_then_defend_position()
+                self.task = Task(TaskType.GATHER_THEN_DEFEND, destination)
+                new_message = Chat(
+                        type=ChatKind.OBSERVATION_SIMPLE,
+                        data=ChatObservationSimple(
                         self.task.destination, CellKind.WANT_TO_DEFEND)
-                ))
-            
+                )
+                self.messages.append(new_message)
+
         else:
-            # شرطهای تغییر حالتها بدون چون و چرا!!!
-   
-            if self.task.type == TaskType.GATHER:
-                # TODO: we can wait and defend instead of waiting for gathering
-                if self.grid[self.position].our_soldiers >= MIN_GATHER_ANTS:
+            if self.task.type == TaskType.GATHER_EXPLORE:
+                if self.grid[self.position].our_soldiers >= MIN_GATHER_ANTS_FOR_EXPLORE and self.position == self.task.destination:
                     seed(self.get_last_turn_number())
+                    destination = self.grid.get_explore_for_kill_location(
+                        self.position)
+                    self.task = Task(TaskType.EXPLORE_FOR_KILL,
+                                     destination=destination)
+                    return
+                else:
+                    return
+            elif self.task.type == TaskType.EXPLORE_FOR_KILL:
+                if self.grid.is_enemy_ant_in_sight():
+                    self.task.destination = self.grid.get_one_enemy_ant_position()
+                else:
+                    self.task.destination = self.grid.self.grid.get_explore_for_kill_location(
+                        self.position)
+                return
+
+            elif self.task.type == GATHER_THEN_DEFEND:
+                if self.grid[self.position].our_soldiers >= MIN_GATHER_ANTS_FOR_GROUP_DEFEND and self.position == self.task.destination:
+                    seed(self.get_last_turn_number())
+                    destination = self.grid.get_group_defend_location(
+                        self.position)
+                    self.task = Task(TaskType.GROUP_DEFEND,
+                                     destination=destination)
+                    return
+                else:
+                    return
+
+            elif self.task.type == GROUP_DEFEND:
+                if self.get_last_turn_number() % INCREMENT_DEFEND_RADIUS_TIME == 0:
+                    cv.DEFEND_RADIUS += 1
+                    destination = self.grid.get_group_defend_location(self.position)
+                    self.task.destination = destination
+                    new_message = Chat(
+                        type=ChatKind.OBSERVATION_SIMPLE,
+                        data=ChatObservationSimple(
+                        self.task.destination, CellKind.WANT_TO_DEFEND)
+                    )
+                    self.messages.append(new_message)
+                elif self.get_last_turn_number() >= FORCE_ATTACK_TURN:
                     if self.grid.enemy_base:
-                        self.attacking_position = self.grid.where_to_stand(
+                        destination = self.grid.where_to_stand(
                             self.position)
                         self.task = Task(TaskType.STAND_ATTACK,
-                                         destination=self.attacking_position)
+                                        destination=destination)
                     else:
-                        destination = self.grid.get_explore_location(
-                            self.position)
-                        self.task = Task(TaskType.EXPLORE_FOR_ATTACK,
-                                         destination=destination)
-                    self.gathering_position = None
-                return
+                        destination = self.grid.get_explore_location(self.position)
+                        self.task = Task(TaskType.EXPLORE_FOR_ATTACK, destination)
+
             elif self.task.type == TaskType.STAND_ATTACK:
                 if self.position == self.task.destination:
                     seed(self.ant_id)
@@ -593,6 +630,7 @@ class Env():
                 else:
                     self.waiting_for_deviate += 1
                     return
+
             elif self.task.type == TaskType.BASE_ATTACK:
                 return
 
@@ -624,6 +662,7 @@ class Env():
                 else:
                     self.task.destination = self.grid.where_to_defend_layer(
                             self.position, layer=self.layer)
+
             elif self.task.type == TaskType.KILL_BY_POSITION:
                 if self.grid.manhattan(self.position, self.task.destination) < 2:
                     if self.grid.is_enemy_in_sight():
@@ -632,6 +671,7 @@ class Env():
                         self.task.destination = self.grid.where_to_defend_layer(
                             self.position, layer=self.layer)
                 return
+
             elif self.task.type == TaskType.DEFEND:
                 if self.damage_position:
                     self.task = Task(TaskType.KILL_BY_POSITION, self.damage_position)
