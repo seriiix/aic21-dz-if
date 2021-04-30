@@ -381,12 +381,18 @@ class Env():
         pass
 
     def update_resource_weights(self):
-        if self.workers >= MIN_WORKER_ANTS:
-            cv.GRASS_SCORE = 3
+        if self.get_last_turn_number() < RESOURCE_VALUE_CHANGE_TURN:
+            cv.GRASS_SCORE = 6
             cv.BREAD_SCORE = 1
         else:
-            cv.GRASS_SCORE = 1
-            cv.BREAD_SCORE = 2
+            cv.GRASS_SCORE = 2
+            cv.BREAD_SCORE = 1
+        # if self.workers >= MIN_WORKER_ANTS:
+        #     cv.GRASS_SCORE = 3
+        #     cv.BREAD_SCORE = 1
+        # else:
+        #     cv.GRASS_SCORE = 1
+        #     cv.BREAD_SCORE = 2
 
     def did_i_died(self):
         if self.game.ant.health < self.previous_health and not self.died:

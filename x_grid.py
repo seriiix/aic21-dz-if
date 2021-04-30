@@ -488,7 +488,7 @@ class Grid():
 
     def get_explore_location(self, start: Position) -> Position:
         locations = self.get_seen_cells_neighbours()
-        weights = [1/self.manhattan(start, location) for location in locations]
+        weights = [1024/self.manhattan(start, location) for location in locations if self[location].safe]
         location = choices(locations, weights=weights, k=1)[
             0] if len(locations) else start
         return location
@@ -533,23 +533,23 @@ class Grid():
     def get_gather_then_defend_position(self):
         seed(10)
         radius_cells = [cell.position for row in self.cells for cell in row
-                        if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS-1 and not cell.invalid and cell.safe and not cell.wall
+                        if self.manhattan(cell.position, self.base_pos) == 6 and not cell.invalid and cell.safe and not cell.wall
                         ]
         radius_cell_paths = [
             self.bfs(self.base_pos, location, known=True) for location in radius_cells]
         r = [radius_cells[i] for i in range(len(radius_cells)) if radius_cell_paths[i] and len(
-            radius_cell_paths[i]) < DEFEND_RADIUS+3]
+            radius_cell_paths[i]) < 9]
         return choice(r)
 
     def get_gather_explore_position(self):
         seed(11)
         radius_cells = [cell.position for row in self.cells for cell in row
-                        if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS+1 and not cell.invalid and cell.safe and not cell.wall
+                        if self.manhattan(cell.position, self.base_pos) == 7 and not cell.invalid and cell.safe and not cell.wall
                         ]
         radius_cell_paths = [
             self.bfs(self.base_pos, location, known=True) for location in radius_cells]
         r = [radius_cells[i] for i in range(len(radius_cells)) if radius_cell_paths[i] and len(
-            radius_cell_paths[i]) < DEFEND_RADIUS+4]
+            radius_cell_paths[i]) < 11]
         return choice(r)
 
     def get_explore_for_kill_location(self, position):
