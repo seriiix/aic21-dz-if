@@ -56,7 +56,7 @@ class MapCell():
             return 0
         else:
             if not type:
-                return self.grass_value * GRASS_SCORE + self.bread_value * BREAD_SCORE
+                return self.grass_value * cv.GRASS_SCORE + self.bread_value * cv.BREAD_SCORE
             else:
                 if type == ResourceType.GRASS.value:
                     return self.grass_value
