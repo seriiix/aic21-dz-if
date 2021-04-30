@@ -17,12 +17,14 @@ class TaskType(Enum):
     EXPLORE_FOR_ATTACK = 10
 
     KILL_BY_POSITION = 11
-    
+
     GATHER_EXPLORE = 12
 
     GATHER_THEN_DEFEND = 13
 
     EXPLORE_FOR_KILL = 14
+    GROUP_DEFEND = 15
+
 
 class Task:
     # TODO: tasks can expire -> especially explore
