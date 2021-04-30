@@ -598,6 +598,8 @@ class Env():
             elif self.task.type == TaskType.GROUP_DEFEND:
                 if self.get_last_turn_number() % INCREMENT_DEFEND_RADIUS_TIME == 0:
                     cv.DEFEND_RADIUS += 1
+                
+                if self.get_last_turn_number() % 2 == 0:
                     destination = self.grid.get_group_defend_location(
                         self.position)
                     self.task.destination = destination
@@ -606,7 +608,8 @@ class Env():
                         data=ChatObservationSimple(
                             self.task.destination, CellKind.WANT_TO_DEFEND)
                     )
-                    self.messages.append(new_message)
+                    self.messages.append(new_message)    
+                    
                 elif self.get_last_turn_number() >= FORCE_ATTACK_TURN:
                     if self.grid.enemy_base:
                         destination = self.grid.where_to_stand(

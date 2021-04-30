@@ -557,14 +557,25 @@ class Grid():
         return self.get_explore_location(position)
 
     def get_group_defend_location(self, position, layer=1):
-        radius_cells = [cell.position for row in self.cells for cell in row
-                        if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS*layer and not cell.invalid and cell.safe and not cell.wall
-                        ]
-        radius_cell_paths = [
-            self.bfs(position, location, known=True) for location in radius_cells]
-        radius_cell_points = [
-            1024/len(path) if path else .001 for path in radius_cell_paths]
-        return choices(radius_cells, weights=radius_cell_points, k=1)[0]
+        if self.enemy_base:
+            radius_cells = [cell.position for row in self.cells for cell in row
+                            if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS*layer and not cell.invalid and cell.safe and not cell.wall
+            ]
+            radius_cell_paths = [
+                self.bfs(self.enemy_base, location, known=True) for location in radius_cells]
+            radius_cell_points = [
+                (max(self.width,self.height)-len(path)) if path else .001 for path in radius_cell_paths]
+            return choices(radius_cells, weights=radius_cell_points, k=1)[0]
+        else:
+            radius_cells = [cell.position for row in self.cells for cell in row
+                if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS*layer and not cell.invalid and cell.safe and not cell.wall
+            ]
+            radius_cell_paths = [
+                self.bfs(self.position, location, known=True) for location in radius_cells]
+            radius_cell_points = [
+                (1024/len(path)) if path else .001 for path in radius_cell_paths]
+            return choices(radius_cells, weights=radius_cell_points, k=1)[0]
+
 
 
 # tests
