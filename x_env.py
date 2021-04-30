@@ -596,7 +596,7 @@ class Env():
                 if self.waiting_for_deviate == MAX_DEVIATION_RADIUS:
                     destination = self.grid.get_attack_position(self.position)
                     self.task = Task(
-                        TaskType.BASE_ATTACK, destination=self.grid.enemy_base
+                        TaskType.BASE_ATTACK, destination=destination
                     )
                     return
                 else:
