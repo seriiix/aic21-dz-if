@@ -28,7 +28,7 @@ class MapCell():
 
         # None means we dont know but false means that it is not! and true is true
         self.base: bool = False
-        self.safe: bool = None
+        self.safe: bool = True
         self.enemy_base: bool = None
         # TODO: میشه یه متغیرتعریف کرد که مورچه های اساین شده به منبع رو نشون بده
         self.our_workers = 0
@@ -272,6 +272,12 @@ class Grid():
                 cntr += 1
         return cntr
 
+    def construct_safety_grid(self, enemy_base_position):
+        for row in self.cells:
+            for cell in row:
+                if self.manhattan(cell.position, enemy_base_position) <= BASE_ATTACK_DISTANCE:
+                    cell.safe = False
+
     def get_direction(self, start: Position, goal: Position, task=None, trap=False):
         random = True
         if task and task.type == TaskType.BASE_ATTACK:
@@ -347,8 +353,8 @@ class Grid():
         نکته اینه که به مرور زمان میتونیم شعاع دفاع رو بیشتر کنیم."""
         # TODO: check if there are defenders there?
         radius_cells = [cell.position for row in self.cells for cell in row
-                        if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS and not cell.invalid
-                        ]
+                        if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS and not cell.invalid and cell.safe
+        ]
         radius_cell_paths = [
             self.bfs(self.base_pos, position, known=True) for position in radius_cells]
         radius_cell_points = [
@@ -361,21 +367,13 @@ class Grid():
         اگه خوب نباشه یه جای بهتر میدیم بهش. چون ممکنه قبلا اون نقطه دیده نمیشده و بهش اساین شده
         نکته اینه که به مرور زمان میتونیم شعاع دفاع رو بیشتر کنیم."""
         # TODO: check if there are defenders there?
-        noise = randint(-1,1)
         radius_cells = [cell.position for row in self.cells for cell in row
-                        if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS*layer+noise and not cell.invalid and not cell.wall
-                        ]
-        radius_paths = [self.bfs(position, self.base_pos, known=True) for position in radius_cells]
-
-        radius_cells_new = []
-        for i in range(len(radius_cells)):
-            if (radius_paths[i] and len(radius_paths[i])==DEFEND_RADIUS*layer+noise):
-                radius_cells_new.append(radius_cells[i])
-
-        radius_distances = [self.manhattan(position, location) for location in radius_cells_new]
-        
-        radius_cell_points = [1/distance for distance in radius_distances]
-        return choices(radius_cells_new, weights=radius_cell_points, k=1)[0]
+            if self.manhattan(cell.position, self.base_pos) == DEFEND_RADIUS*layer and not cell.invalid and cell.safe
+        ]
+        radius_cell_paths = [
+            self.bfs(self.base_pos, position, known=True) for position in radius_cells]
+        radius_cell_points = [1024/len(path) if path else .001 for path in radius_cell_paths]
+        return choices(radius_cells, weights=radius_cell_points, k=1)[0]
 
     def where_to_attack(self, position: Position, current_destination=None) -> Position:
         for row in self.cells:
@@ -411,7 +409,7 @@ class Grid():
     def get_harvest_location(self, position: Position) -> Position:
         locations = [self[Position(x, y)].position
                      for x in range(self.width) for y in range(self.height)
-                     if self[Position(x, y)].get_resource_score()]
+                     if self[Position(x, y)].get_resource_score() and self[Position(x, y)].safe]
         weights = [self.get_harvest_score(
             position, location) for location in locations]
         if len(locations):

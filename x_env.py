@@ -88,6 +88,7 @@ class Env():
                         self.grid[cell_pos].safe = False
                         self.grid[cell_pos].enemy_base = True
                         self.grid.enemy_base = cell_pos
+                        self.grid.construct_safety_grid(cell_pos)
                     elif msg.data.cell_kind == CellKind.WANT_TO_DEFEND:
                         self.grid[cell_pos].want_to_defenders += 1
                         self.defenders += 1
@@ -163,6 +164,7 @@ class Env():
                             self.grid[cell_pos].safe = False
                             self.grid[cell_pos].enemy_base = True
                             self.grid.enemy_base = cell_pos
+                            self.grid.construct_safety_grid(cell_pos)
                         elif msg.data.cell_kind == CellKind.WANT_TO_DEFEND:
                             self.grid[cell_pos].want_to_defenders += 1
                             self.defenders += 1
@@ -353,13 +355,15 @@ class Env():
                             data=ChatObservationSimple(
                                 attacker_pos, CellKind.ENEMY_BASE)
                         ))
-                        self.gathering_position = self.grid.get_gathering_position(
-                            defender_pos)
-                        self.messages.append(Chat(
-                            type=ChatKind.OBSERVATION_SIMPLE,
-                            data=ChatObservationSimple(
-                                self.gathering_position, CellKind.WANT_TO_GATHER)
-                        ))
+                        self.grid.construct_safety_grid(attacker_pos)
+                        if ATTACK_ON_ENEMY_BASE_VISIT:
+                            self.gathering_position = self.grid.get_gathering_position(
+                                defender_pos)
+                            self.messages.append(Chat(
+                                type=ChatKind.OBSERVATION_SIMPLE,
+                                data=ChatObservationSimple(
+                                    self.gathering_position, CellKind.WANT_TO_GATHER)
+                            ))
                         # TODO: RETURN FROM SAFE POSITIONS
 
                 elif self.task.type == TaskType.DEFEND:
