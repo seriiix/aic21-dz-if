@@ -1,13 +1,3 @@
-
-# 32 * 8 = 256 bit message
-#
-# antID | ChatKind | fixedLengthMessages(n)
-
-# Types
-# OBSERVATION_SIMPLE:
-# ChatKind = 000
-# messages | type
-
 from typing import List
 from enum import Enum
 from x_helpers import Position
