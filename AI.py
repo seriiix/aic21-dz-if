@@ -44,8 +44,6 @@ class AI:
             import traceback
             h = traceback.format_exc()
             message, value, direction = h, 404, 0
-        # print(e)
-        # return (message,value, direction)
         if brain.DEBUG:
             return (message, value, brain.get_debug_move().value)
 
